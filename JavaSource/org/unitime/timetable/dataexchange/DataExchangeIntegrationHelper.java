@@ -38,8 +38,12 @@ import org.unitime.timetable.util.queue.QueueMessage;
 @Service("dataExchangeHelper")
 public class DataExchangeIntegrationHelper {
 	
-	public Document file2document(File file) throws DocumentException {
-		return new SAXReader().read(file);
+	public Document file2document(File file) throws DocumentException, SAXException {
+		SAXReader sax_reader = new SAXReader();
+		sax_reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		sax_reader.setFeature("http://xml.org/sax/features/external-general-entities", false);
+		sax_reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+		return sax_reader.read(file);
 	}
 	
 	public String exception2message(Exception exception) throws IOException {

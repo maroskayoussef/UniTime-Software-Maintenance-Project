@@ -49,8 +49,14 @@ public class XmlApiHelper extends AbstractApiHelper {
 	public Document getRequest(Type requestType) throws IOException {
 		Reader reader = iRequest.getReader();
 		try {
-			return new SAXReader().read(reader);
+			SAXReader sax_reader = new SAXReader();
+			sax_reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+			sax_reader.setFeature("http://xml.org/sax/features/external-general-entities", false);
+			sax_reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+			return sax_reader.read(reader);
 		} catch (DocumentException e) {
+			throw new IOException(e.getMessage(), e);
+		} catch (SAXException e) {
 			throw new IOException(e.getMessage(), e);
 		} finally {
 			reader.close();

@@ -50,42 +50,53 @@ public class ExportServlet extends HttpServlet {
 		WebApplicationContext applicationContext = WebApplicationContextUtils.getWebApplicationContext(getServletContext());
 		return (Exporter) applicationContext.getBean("org.unitime.timetable.export.Exporter:" + reference);
 	}
-	
+
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		ExportServletHelper helper = null;
 		String ref = null;
 		try {
 			helper = new ExportServletHelper(request, response, getSessionContext());
-			
+
 			ref = helper.getParameter("output");
 			if (ref == null) {
 				sLog.info("No exporter provided.");
 				response.sendError(HttpServletResponse.SC_BAD_REQUEST, "No exporter provided, please set the output parameter.");
 				return;
 			}
-			
+
 			getExporter(ref).export(helper);
 		} catch (NoSuchBeanDefinitionException e) {
 			sLog.info("Exporter " + ref + " not known.");
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Exporter " + ref + " not known, please check the output parameter.");
+			try {
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Exporter " + ref + " not known, please check the output parameter.");
+			} catch (IOException ex) { sLog.warn("Failed to send error: " + ex.getMessage()); }
 		} catch (IllegalArgumentException e) {
 			sLog.info(e.getMessage());
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+			try {
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+			}
+			catch (IOException ex) { sLog.warn("Failed to send error: " + ex.getMessage()); }
 		} catch (PageAccessException e) {
 			sLog.info(e.getMessage());
-			response.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
+			try {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
+			}
+			catch (IOException ex) { sLog.warn("Failed to send error: " + ex.getMessage()); }
 		} catch (Exception e) {
 			sLog.warn(e.getMessage(), e);
-			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+			try {
+				response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+			}
+			catch (IOException ex) { sLog.warn("Failed to send error: " + ex.getMessage()); }
 		} finally {
 			if (helper != null) {
 				if (helper.hasOutputStream()) {
-					helper.getOutputStream().flush();
-					helper.getOutputStream().close();
+					try { helper.getOutputStream().flush(); } catch (IOException e) { sLog.warn("error flushing output stream: " + e.getMessage()); }
+					try { helper.getOutputStream().close(); } catch (IOException e) { sLog.warn("error closing output stream: " + e.getMessage()); }
 				}
 				if (helper.hasWriter()) {
-					helper.getWriter().flush();
-					helper.getWriter().close();
+					try { helper.getWriter().flush(); } catch (IOException e) { sLog.warn("error flushing writer: " + e.getMessage()); }
+					try { helper.getWriter().close(); } catch (IOException e) { sLog.warn("error closing writer: " + e.getMessage()); }
 				}
 			}
 		}

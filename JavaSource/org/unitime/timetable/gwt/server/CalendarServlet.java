@@ -135,7 +135,12 @@ public class CalendarServlet extends HttpServlet {
 		}
 		Long sessionId = null;
 		if (params.getParameter("sid") != null) {
-			sessionId = Long.valueOf(params.getParameter("sid"));
+			try {
+				sessionId = Long.valueOf(params.getParameter("sid"));
+			} catch (NumberFormatException e) {
+				sLog.warn("Invalid session: " + params.getParameter("sid"));
+				sessionId = null;
+			}
 		} else {
 			UserContext user = (getSessionContext() == null ? null : getSessionContext().getUser());
 			if (user != null)
@@ -157,12 +162,19 @@ public class CalendarServlet extends HttpServlet {
 			}
 		}
 		if (sessionId == null) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "No academic session provided.");
+			try {
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST, "No academic session provided.");
+			} catch (IOException e) {
+				sLog.warn("could not send error: " + e.getMessage());
+			}
 			return;
 		}
 		Session session = SessionDAO.getInstance().get(sessionId);
 		if (session == null) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Academic session does not exist.");
+			try { response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Academic session does not exist.");
+			} catch (IOException e) {
+				sLog.warn("could not send error: " + e.getMessage());
+			}
 			return;
 		}
 		String classIds = params.getParameter("cid");
@@ -273,25 +285,37 @@ public class CalendarServlet extends HttpServlet {
                     }
                 }
             }
-        } catch (Exception e) {
-        	Debug.error(e.getMessage(), e);
-        	response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
-        }
-		
-		PrintWriter out = response.getWriter();
-        ICalWriter writer = new ICalWriter(out, ICalVersion.V2_0);
+		} catch (Exception e) {
+			Debug.error(e.getMessage(), e);
+			try { response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+			} catch (IOException ex) {
+				sLog.warn("Failed to send error: " + ex.getMessage());
+			}
+		}
+
+		PrintWriter out = null;
+		try {
+			out = response.getWriter();
+		} catch (IOException e) {
+			sLog.warn("Failed to get writer: " + e.getMessage());
+			return;
+		}
+		ICalWriter writer = new ICalWriter(out, ICalVersion.V2_0);
+
 		try {
 			try {
 				writer.setGlobalTimezone(CalendarVTimeZoneGenerator.download(TimeZone.getDefault()));
 			} catch (IllegalArgumentException e) {
-	        	sLog.warn("Failed to set default time zone: " + e.getMessage());
-	        }
-        	writer.write(ical);
-        	writer.flush();
-        	out.flush();
+				sLog.warn("Failed to set default time zone: " + e.getMessage());
+			}
+			writer.write(ical);
+			writer.flush();
+			out.flush();
 		} finally {
-			out.close();
-			writer.close();
+			try { writer.close();
+			} catch (IOException e) { sLog.warn("error closing writer: " + e.getMessage()); }
+			try { out.close();
+			} catch (IOException e) { sLog.warn("error closing output: " + e.getMessage()); }
 		}
 	}
 
