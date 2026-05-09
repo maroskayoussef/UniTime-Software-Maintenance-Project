@@ -36,6 +36,11 @@ import org.apache.commons.logging.LogFactory;
  * @author Tomas Muller
  */
 public class Debug {
+
+	private Debug() {
+		throw new UnsupportedOperationException("Utility class");
+	}
+	
     // Number format for logging (allocated memory)
     private static NumberFormat sNumberFormat =
             new DecimalFormat("###,#00.00", new DecimalFormatSymbols(Locale.US));
