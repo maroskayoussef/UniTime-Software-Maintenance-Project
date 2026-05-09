@@ -164,9 +164,11 @@ public class CreateBaseModelFromXml extends Task {
 				String name = setEl.attributeValue("name");
 				String column = setEl.element("key").attributeValue("column");
 				String clazz = fixType(setEl.element("many-to-many").attributeValue("class"), pkg);
-				clazz = clazz.substring(clazz.lastIndexOf('.')+1);
-				info("  set: " + clazz + "." + column + ":" + name);
-				iRelations.put(clazz + "." + column, name);
+				if (clazz != null){
+					clazz = clazz.substring(clazz.lastIndexOf('.')+1);
+					info("  set: " + clazz + "." + column + ":" + name);
+					iRelations.put(clazz + "." + column, name);
+				}
 			}
 		}
 		for (Iterator<Element> i=classEl.elementIterator("many-to-one");i.hasNext();) {
@@ -345,11 +347,12 @@ public class CreateBaseModelFromXml extends Task {
 		for (Iterator<Element> i = classEl.elementIterator("id"); i.hasNext();) {
 			Element el = i.next();
 			String type = fixType(el.attributeValue("type"), pkg);
-			if (type.indexOf('.')>=0) {
+			if (type != null && type.indexOf('.')>=0) {
 				imports.add(type);
 				type = type.substring(type.lastIndexOf('.')+1);
 			}
 			String name = fixName(el.attributeValue("name"));
+			if (name == null) continue;
 			String column = el.attributeValue("column").toLowerCase();
 			String attribute = name.substring(0,1).toLowerCase()+name.substring(1);
 			if ("default".equals(attribute)) attribute = "defaultValue";
@@ -1063,7 +1066,10 @@ public class CreateBaseModelFromXml extends Task {
 		
 		// BASE DAO class
 		File f = new File(fileFromPackage(outputFolder, pkg + ".base"), "Base" + className + "DAO.java");
-		if (f.exists()) f.delete();
+		if (f.exists()){
+			boolean deleted = f.delete();
+			if (!deleted) sLog.warn("Failed to delete file: " + f.getPath());
+		}
 		
 		// DAO class
 		File daoFile = new File(fileFromPackage(outputFolder, pkg+".dao"), className + "DAO.java");
