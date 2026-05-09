@@ -35,6 +35,7 @@ import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
 import org.hibernate.CacheMode;
 import org.unitime.timetable.security.SessionContext;
+import org.xml.sax.SAXException;
 
 /**
  * @author Tomas Muller

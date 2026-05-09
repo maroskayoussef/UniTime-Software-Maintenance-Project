@@ -313,9 +313,11 @@ public class CalendarServlet extends HttpServlet {
 			out.flush();
 		} finally {
 			try { writer.close();
-			} catch (IOException e) { sLog.warn("error closing writer: " + e.getMessage()); }
+			} catch (IOException e) { sLog.warn("error closing writer: " + e.getMessage());
+			}
 			try { out.close();
-			} catch (IOException e) { sLog.warn("error closing output: " + e.getMessage()); }
+			} catch (Exception e) { sLog.warn("error closing output: " + e.getMessage());
+			}
 		}
 	}
 
