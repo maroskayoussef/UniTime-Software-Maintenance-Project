@@ -88,6 +88,8 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
 	private static final long serialVersionUID = 8307712785352190036L;
 	protected final static CourseMessages MSG = Localization.create(CourseMessages.class);
 
+	private static final String DISPLAY_CLASS_DETAIL = "displayClassDetail";
+
 	protected String classId = null;
 	protected String op2 = null;
 	protected String deleteType = null;
@@ -181,7 +183,7 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
 
         // Cancel - Go back to Class Detail Screen
         if (MSG.actionBackToDetail().equals(op)) {
-        	return "displayClassDetail";
+        	 return DISPLAY_CLASS_DETAIL;
         }
 
         // If class id is not null - load class info
@@ -222,7 +224,7 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
                     c.getSchedulingSubpart().getInstrOfferingConfig().getInstructionalOffering().getControllingCourseOffering().getSubjectArea(),
                     c.getManagingDept());
 
-            return "displayClassDetail";
+			return DISPLAY_CLASS_DETAIL;
         }
 
         // Reset form for initial load
@@ -276,7 +278,7 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
     	            	return null;
     	            }
 
-    	            return "displayClassDetail";
+					return DISPLAY_CLASS_DETAIL;
             	} catch (Exception e) {
             		tx.rollback(); throw e;
             	}

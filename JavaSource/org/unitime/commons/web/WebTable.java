@@ -87,6 +87,9 @@ public class WebTable {
     
     protected WebTableTweakStyle iWebTableTweakStyle = null;
     protected WebTableCellStyle iWebTableCellStyle = null;
+
+    private static final String ALIGN_RIGHT = "right";
+    private static final String COLSPAN = " colspan=";
     
     /** creates a WebTable instance */
     public WebTable(int columns, String name, String[] headers, String[] align, boolean[] asc) {
@@ -266,7 +269,7 @@ public class WebTable {
     }
     
     protected static String align(String alignment, boolean rtl) {
-    	if (rtl && "left".equalsIgnoreCase(alignment)) return "right";
+    	if (rtl && "left".equalsIgnoreCase(alignment)) return ALIGN_RIGHT;
     	return alignment;
     }
     
@@ -277,7 +280,7 @@ public class WebTable {
         boolean rtl = Localization.isRTL();
         
         if (iName != null && iName.trim().length()>0) {
-            sb.append("<tr><td colspan=" + iColumns
+            sb.append("<tr><td "+ COLSPAN + iColumns
                     + "><div class=WelcomeRowHead>" + iName + "</div></td></tr>");
         }
 
@@ -324,14 +327,14 @@ public class WebTable {
                                 : i + 1));
 
                         sb.append("<td align=\""
-                                + (iAlign != null ? align(iAlign[i], rtl) : (rtl ? "right" : "left")) + "\""
+                                + (iAlign != null ? align(iAlign[i], rtl) : (rtl ? ALIGN_RIGHT : "left")) + "\""
                                 + (i == iHeaders.length - 1
-                                        ? " colspan=" + last + " "
+                                        ? COLSPAN + last + " "
                                         : "") + " class=\"WebTableHeader\">" + header + "</td>");
                     } else {
                         sb.append("<td class=\"WebTableHeader\" "
                                 + (i == iHeaders.length - 1
-                                        ? " colspan=" + last + " "
+                                        ? COLSPAN + last + " "
                                         : "")
                                 + ">&nbsp;</td>");
                     }
@@ -382,10 +385,10 @@ public class WebTable {
                         sb.append("<td "
                                 + getCellStyle(wtline, i, style)
                                 + " align=\""
-                                + (iAlign != null ? align(iAlign[i], rtl) : (rtl ? "right" : "left"))
+                                + (iAlign != null ? align(iAlign[i], rtl) : (rtl ? ALIGN_RIGHT : "left"))
                                 + "\""
                                 + (i == line.length - 1
-                                        ? " colspan=" + last + " "
+                                        ? COLSPAN + last + " "
                                         : "")
                                 + ">"
                                 + (i == 0 && wtline.getUniqueId() != null ? "<A name=\""+wtline.iUniqueId+"\" ></A>" : "")
@@ -396,7 +399,7 @@ public class WebTable {
                         		+ getCellStyle(wtline, i, style)
                                 + " "
                                 + (i == line.length - 1
-                                        ? " colspan=" + last + " "
+                                        ? COLSPAN + last + " "
                                         : "")
                                 + ">&nbsp;</td>");
                     }
