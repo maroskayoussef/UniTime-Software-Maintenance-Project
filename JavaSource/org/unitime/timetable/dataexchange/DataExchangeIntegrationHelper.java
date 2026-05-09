@@ -31,6 +31,7 @@ import org.dom4j.io.SAXReader;
 import org.springframework.stereotype.Service;
 import org.unitime.timetable.defaults.ApplicationProperty;
 import org.unitime.timetable.util.queue.QueueMessage;
+import org.xml.sax.SAXException;
 
 /**
  * @author Tomas Muller
