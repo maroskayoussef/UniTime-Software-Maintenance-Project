@@ -33,7 +33,7 @@ public class CSVPrinter implements Printer {
 	private PrintWriter iOut;
 	private String[] iLastLine = null;
 	private boolean iCheckLast = false;
-	private Set<Integer> iHiddenColumns = new HashSet<Integer>();
+	private Set<Integer> iHiddenColumns = new HashSet<>();
 	private String iDelimiter = ",";
 	private String iQuotation = "\"";
 	
@@ -67,33 +67,75 @@ public class CSVPrinter implements Printer {
 		printLine(fields);
 	}
 	
-	@Override
+//	@Override
+//	public void printLine(String... fields) {
+//		for (int idx = 0; idx < fields.length; idx++) {
+//			if (iHiddenColumns.contains(idx)) continue;
+//			String f = fields[idx];
+//
+//			if (f != null && !f.isEmpty()) {
+//				if (!iCheckLast || !f.equals(iLastLine == null || idx >= iLastLine.length ? null : iLastLine[idx]))
+//					if (iQuotation != null && !iQuotation.isEmpty()) {
+//						iOut.print(iQuotation + f.replace(iQuotation, iQuotation + iQuotation) + iQuotation);
+//					} else {
+//						iOut.print(f);
+//					}
+//			}
+//			if (idx + 1 < fields.length)
+//				iOut.print(iDelimiter == null || iDelimiter.isEmpty() ? "," : iDelimiter);
+//		}
+//		iOut.println();
+//		iLastLine = fields;
+//	}
+    @Override
 	public void printLine(String... fields) {
 		for (int idx = 0; idx < fields.length; idx++) {
-			if (iHiddenColumns.contains(idx)) continue;
-			String f = fields[idx];
-
-			if (f != null && !f.isEmpty()) {
-				if (!iCheckLast || !f.equals(iLastLine == null || idx >= iLastLine.length ? null : iLastLine[idx]))
-					if (iQuotation != null && !iQuotation.isEmpty()) {
-						iOut.print(iQuotation + f.replace(iQuotation, iQuotation + iQuotation) + iQuotation);
-					} else {
-						iOut.print(f);	
-					}
+			if (!iHiddenColumns.contains(idx)) {
+				printField(idx, fields[idx]);
 			}
-			if (idx + 1 < fields.length)
-				iOut.print(iDelimiter == null || iDelimiter.isEmpty() ? "," : iDelimiter);
+			if (idx + 1 < fields.length) {
+			iOut.print(getDelimiter());
+			}
 		}
 		iOut.println();
 		iLastLine = fields;
 	}
-	
+
+	private void printField(int idx, String field) {
+		if (field == null || field.isEmpty()) return;
+		if (iCheckLast && field.equals(getPreviousValue(idx))) return;
+		iOut.print(formatField(field));
+	}
+
+	private String getPreviousValue(int idx) {
+		if (iLastLine == null || idx >= iLastLine.length) return null;
+		return iLastLine[idx];
+	}
+
+	private String formatField(String field) {
+		if (iQuotation != null && !iQuotation.isEmpty()) {
+			return iQuotation + field.replace(iQuotation, iQuotation + iQuotation) + iQuotation;
+		}
+		return field;
+	}
+
+	private String getDelimiter() {
+		return (iDelimiter == null || iDelimiter.isEmpty()) ? "," : iDelimiter;
+	}
+
 	@Override
 	public void flush() {
 		iLastLine = null;
 	}
 	
-	@Override
-	public void close() {
+//	@Override
+//	public void close() {
+//	}
+    @Override
+    public void close() {
+		if (iOut != null) {
+			iOut.flush();
+			iOut.close();
+		}
 	}
 }
