@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
-*/
+ */
 //package org.unitime.timetable.export.instructors;
 //
 //import java.io.IOException;
@@ -250,7 +250,7 @@ public class InstructorsCSV implements Exporter {
 				compareValues(
 						l1.getCells().get(column).getComparable(),
 						l2.getCells().get(column).getComparable(),
-						1
+						true // Ascending
 				)
 		);
 	}
@@ -260,18 +260,23 @@ public class InstructorsCSV implements Exporter {
 				compareValues(
 						l1.getCells().get(column).getComparable(),
 						l2.getCells().get(column).getComparable(),
-						-1
+						false // Descending
 				)
 		);
 	}
 
-	@SuppressWarnings("unchecked")
-	private int compareValues(Comparable<Object> o1, Comparable<Object> o2, int direction) {
-		if (o1 instanceof String) {
-			return direction * NaturalOrderComparator.compare(
-					o1.toString(), o2.toString()
-			);
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private int compareValues(Comparable o1, Comparable o2, boolean ascending) {
+		int result;
+		if (o1 == null) {
+			result = (o2 == null) ? 0 : -1;
+		} else if (o2 == null) {
+			result = 1;
+		} else if (o1 instanceof String) {
+			result = NaturalOrderComparator.compare(o1.toString(), o2.toString());
+		} else {
+			result = o1.compareTo(o2);
 		}
-		return direction * o1.compareTo(o2);
+		return ascending ? result : -result;
 	}
 }
