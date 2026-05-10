@@ -54,6 +54,7 @@ import org.unitime.timetable.solver.ui.FileInfo;
 import org.unitime.timetable.solver.ui.TimetableInfo;
 import org.unitime.timetable.solver.ui.TimetableInfoFileProxy;
 import org.unitime.timetable.solver.ui.TimetableInfoUtil;
+import org.xml.sax.SAXException;
 
 
 /**
@@ -266,6 +267,9 @@ public class SolverInfo extends BaseSolverInfo {
 	public Document getValue() {
 		try {
 			SAXReader reader = new SAXReader();
+			reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+			reader.setFeature("http://xml.org/sax/features/external-general-entities", false);
+			reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
 			GZIPInputStream gzipInput = new GZIPInputStream(new ByteArrayInputStream(getData()));
 			Document document = reader.read(gzipInput);
 			gzipInput.close();
@@ -273,6 +277,8 @@ public class SolverInfo extends BaseSolverInfo {
 		} catch (IOException e) {
 			throw new HibernateException(e.getMessage(),e);
 		} catch (DocumentException e) {
+			throw new HibernateException(e.getMessage(),e);
+		} catch (SAXException e) {
 			throw new HibernateException(e.getMessage(),e);
 		}
 	}

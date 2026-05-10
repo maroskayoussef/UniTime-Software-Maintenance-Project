@@ -58,11 +58,13 @@ public class StaffImport extends BaseImport {
 	}
 
 	public void loadFromStream(FileInputStream fis) throws Exception {
-
-		Document document = (new SAXReader()).read(fis);
-        Element root = document.getRootElement();
-        
-        loadXml(root);
+		SAXReader sax_reader = new SAXReader();
+		sax_reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		sax_reader.setFeature("http://xml.org/sax/features/external-general-entities", false);
+		sax_reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+		Document document = sax_reader.read(fis);
+		Element root = document.getRootElement();
+		loadXml(root);
     }
     
 	

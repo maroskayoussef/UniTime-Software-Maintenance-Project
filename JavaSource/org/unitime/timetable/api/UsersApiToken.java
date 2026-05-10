@@ -39,6 +39,8 @@ import org.unitime.timetable.model.User;
 import org.unitime.timetable.model.dao._RootDAO;
 import org.unitime.timetable.security.UserContext;
 import org.unitime.timetable.security.context.UniTimeUserContext;
+import java.security.SecureRandom;
+
 
 /**
  * @author Tomas Muller
@@ -55,40 +57,35 @@ public class UsersApiToken implements ApiToken {
 		SecretKey key = factory.generateSecret(spec);
 		return new SecretKeySpec(key.getEncoded(), "AES");
 	}
-	
+
 	public static String encode(String text) {
 		try {
 			if (text == null || text.isEmpty()) return null;
 			Cipher cipher = Cipher.getInstance(ApplicationProperty.UrlEncoderCipher.value());
-			String iv = ApplicationProperty.UrlEncoderCipherIV.value();
-			if (iv == null || iv.isEmpty())
-				cipher.init(Cipher.ENCRYPT_MODE, secret());
-			else {
-				MessageDigest md5 = MessageDigest.getInstance("MD5");
-				cipher.init(Cipher.ENCRYPT_MODE, secret(), new IvParameterSpec(md5.digest(iv.getBytes())));
-			}
-			return new BigInteger(cipher.doFinal(text.getBytes())).toString(36);
+			byte[] iv = new byte[16];
+			new SecureRandom().nextBytes(iv);
+			cipher.init(Cipher.ENCRYPT_MODE, secret(), new IvParameterSpec(iv));
+			return new BigInteger(iv).toString(36) + ":" + new BigInteger(cipher.doFinal(text.getBytes())).toString(36);
 		} catch (Exception e) {
 			throw new GwtRpcException("Encoding failed: " + e.getMessage(), e);
 		}
 	}
-	
+
 	public static String decode(String text) {
 		try {
 			if (text == null || text.isEmpty()) return null;
 			Cipher cipher = Cipher.getInstance(ApplicationProperty.UrlEncoderCipher.value());
-			String iv = ApplicationProperty.UrlEncoderCipherIV.value();
-			if (iv == null || iv.isEmpty())
-				cipher.init(Cipher.DECRYPT_MODE, secret());
-			else {
-				MessageDigest md5 = MessageDigest.getInstance("MD5");
-				cipher.init(Cipher.DECRYPT_MODE, secret(), new IvParameterSpec(md5.digest(iv.getBytes())));
+			String[] string_parts = text.split(":");
+			if (string_parts.length == 2) {
+				byte[] iv = new BigInteger(string_parts[0], 36).toByteArray();
+				cipher.init(Cipher.DECRYPT_MODE, secret(), new IvParameterSpec(iv));
+				return new String(cipher.doFinal(new BigInteger(string_parts[1], 36).toByteArray()));
 			}
-			return new String(cipher.doFinal(new BigInteger(text, 36).toByteArray()));
+			return null;
 		} catch (Exception e) {
 			throw new GwtRpcException("Decoding failed: " + e.getMessage(), e);
 		}
-	}	
+	}
 
 	@Override
 	public String getToken(String externalId, String secret) {
