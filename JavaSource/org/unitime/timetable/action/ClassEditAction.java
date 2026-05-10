@@ -15,7 +15,7 @@
  *
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
 */
 package org.unitime.timetable.action;
 
@@ -72,7 +72,7 @@ import org.unitime.timetable.webutil.BackTracker;
 @Action(value = "classEdit", results = {
 		@Result(name = "editClass", type = "tiles", location = "classEditTile.tiles"),
 		@Result(name = "instructionalOfferingSearch", type = "redirect", location = "/instructionalOfferingSearch.action"),
-		@Result(name = "addDistributionPrefs", type = "redirect", location = "/distributionPrefs.action", 
+		@Result(name = "addDistributionPrefs", type = "redirect", location = "/distributionPrefs.action",
 			params = { "classId", "${form.classId}", "op", "${op}"}
 		),
 		@Result(name = "displayClassDetail", type = "redirect", location = "/classDetail.action",
@@ -98,7 +98,7 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
 	public String getCid() { return classId; }
 	public void setCid(String classId) { this.classId = classId; }
 	public String getOp2() { return op2; }
-	public void setOp2(String op2) { this.op2 = op2; }	
+	public void setOp2(String op2) { this.op2 = op2; }
 	public String getDeleteType() { return deleteType; }
 	public void setDeleteType(String deleteType) { this.deleteType = deleteType; }
 	public Long getDeleteId() { return deleteId; }
@@ -108,17 +108,8 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
     public final String HASH_INSTRUCTORS = "Instructors";
 
     public String execute() throws Exception {
-    	if (ApplicationProperty.LegacyClassEdit.isFalse()) {
-    		String url = "classEdit";
-    		boolean first = true;
-    		for (Enumeration<String> e = getRequest().getParameterNames(); e.hasMoreElements(); ) {
-    			String param = e.nextElement();
-    			url += (first ? "?" : "&") + param + "=" + URLEncoder.encode(getRequest().getParameter(param), "utf-8");
-    			first = false;
-    		}
-    		response.sendRedirect(url);
-			return null;
-    	}
+		if (handleLegacyRedirect()) return null;
+
     	if (form == null) form = new ClassEditForm();
 
 		super.execute();
@@ -126,58 +117,26 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
 		if (classId == null && request.getAttribute("cid") != null)
 			classId = (String)request.getAttribute("cid");
 
-		if (op == null) op = form.getOp();
-        if (op2 != null && !op2.isEmpty()) op = op2;
+		initializeOp();
 
 
         // Read class id from form
-        if (MSG.actionAddTimePreference().equals(op)
-                || MSG.actionAddRoomPreference().equals(op)
-                || MSG.actionAddBuildingPreference().equals(op)
-                || MSG.actionAddRoomFeaturePreference().equals(op)
-                || MSG.actionAddDistributionPreference().equals(op)
-                || MSG.actionAddInstructor().equals(op)
-                || MSG.actionUpdatePreferences().equals(op)
-                || MSG.actionAddDatePatternPreference().equals(op)
-                || MSG.actionAddAttributePreference().equals(op)
-                || MSG.actionAddInstructorPreference().equals(op)
-                || MSG.actionClearClassPreferences().equals(op)
-                || MSG.actionRemoveBuildingPreference().equals(op)
-        		|| MSG.actionRemoveDistributionPreference().equals(op)
-        		|| MSG.actionRemoveRoomFeaturePreference().equals(op)
-        		|| MSG.actionRemoveRoomGroupPreference().equals(op)
-        		|| MSG.actionRemoveRoomPreference().equals(op)
-        		|| MSG.actionRemoveDatePatternPreference().equals(op)
-        		|| MSG.actionRemoveTimePattern().equals(op)
-        		|| MSG.actionRemoveInstructor().equals(op)
-        		|| MSG.actionRemoveAttributePreference().equals(op)
-        		|| MSG.actionRemoveInstructorPreference().equals(op)
-                || MSG.actionAddRoomGroupPreference().equals(op)
-                || MSG.actionBackToDetail().equals(op)
-                || MSG.actionNextClass().equals(op)
-                || MSG.actionPreviousClass().equals(op)
-                || "updateDatePattern".equals(op)
-                || "updatePref".equals(op)) {
-            classId = form.getClassId().toString();
-        }
+		if (shouldReadClassIdFromForm(op)) {
+			classId = form.getClassId().toString();
+		}
 
         // Determine if initial load
         if (op==null || op.trim().isEmpty()) {
             op = "init";
         }
-        
+
         boolean timeVertical = CommonValues.VerticalGrid.eq(sessionContext.getUser().getProperty(UserProperty.GridOrientation));
 
         Debug.debug("op: " + op);
         Debug.debug("class: " + classId);
 
         // Check class exists
-        if (classId==null || classId.trim().isEmpty()) {
-           if (BackTracker.doBack(request, response))
-        	   return null;
-           else
-        	   throw new Exception(MSG.errorClassInfoNotSupplied());
-        }
+		if (isClassIdMissing()) return null;
 
         sessionContext.checkPermission(classId, "Class_", Right.ClassEdit);
 
@@ -196,183 +155,41 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
             return "addDistributionPrefs";
 	    }
 
-	    // Add Instructor
-	    if(MSG.actionAddInstructor().equals(op))
-            addInstructor();
-
-	    // Delete Instructor
-        if (MSG.actionRemoveInstructor().equals(op) && "instructor".equals(deleteType))
-            deleteInstructor();
+		handleInstructorOperations(c);
 
         // Restore all inherited preferences
-        if (MSG.actionClearClassPreferences().equals(op)) {
-        	sessionContext.checkPermission(c, Right.ClassEditClearPreferences);
-
-            Set s = c.getPreferences();
-            doClear(s, Preference.Type.TIME, Preference.Type.ROOM, Preference.Type.ROOM_FEATURE, Preference.Type.ROOM_GROUP, Preference.Type.BUILDING, Preference.Type.DATE);
-            c.setPreferences(s);
-            cdao.getSession().merge(c);
-            cdao.getSession().flush();
-            op = "init";
-
-            ChangeLog.addChange(
-                    null,
-                    sessionContext,
-                    c,
-                    ChangeLog.Source.CLASS_EDIT,
-                    ChangeLog.Operation.CLEAR_PREF,
-                    c.getSchedulingSubpart().getInstrOfferingConfig().getInstructionalOffering().getControllingCourseOffering().getSubjectArea(),
-                    c.getManagingDept());
-
-			return DISPLAY_CLASS_DETAIL;
-        }
+		if (MSG.actionClearClassPreferences().equals(op)) {
+			return handleClearPreferences(c, cdao);
+		}
 
         // Reset form for initial load
-        if ("init".equals(op)) {
-            form.reset();
-        }
+		resetFormIfInit();
 
         // Load form attributes that are constant
         doLoad(c, op);
 
         // Update Preferences for Class
-        if (MSG.actionUpdatePreferences().equals(op) || MSG.actionNextClass().equals(op) || MSG.actionPreviousClass().equals(op)) {
-            // Validate input prefs
-            form.validate(this);
-
-            // No errors - Add to class and update
-            if (!hasFieldErrors()) {
-
-            	org.hibernate.Session hibSession = cdao.getSession();
-            	Transaction tx = hibSession.beginTransaction();
-
-            	try {
-                    // Clear all old prefs
-                    Set s = c.getPreferences();
-                    doClear(s, Preference.Type.TIME, Preference.Type.ROOM, Preference.Type.ROOM_FEATURE, Preference.Type.ROOM_GROUP, Preference.Type.BUILDING, Preference.Type.DATE);
-
-                    // Save class data
-                    doUpdate(c, hibSession);
-
-                    // Save Prefs
-                    super.doUpdate(c, s, timeVertical,
-                    		Preference.Type.TIME, Preference.Type.ROOM, Preference.Type.ROOM_FEATURE, Preference.Type.ROOM_GROUP, Preference.Type.BUILDING, Preference.Type.DATE);
-                    
-                    hibSession.merge(c);
-
-    	            tx.commit();
-    	            
-                    String className = ApplicationProperty.ExternalActionClassEdit.value();
-                	if (className != null && className.trim().length() > 0){
-                    	ExternalClassEditAction editAction = (ExternalClassEditAction) (Class.forName(className).getDeclaredConstructor().newInstance());
-                   		editAction.performExternalClassEditAction(c, hibSession);
-                	}
-
-    	            if (MSG.actionNextClass().equals(op)) {
-    	            	response.sendRedirect(response.encodeURL("classEdit.action?cid="+form.getNextId()));
-    	            	return null;
-    	            }
-
-    	            if (MSG.actionPreviousClass().equals(op)) {
-    	            	response.sendRedirect(response.encodeURL("classEdit.action?cid="+form.getPreviousId()));
-    	            	return null;
-    	            }
-
-					return DISPLAY_CLASS_DETAIL;
-            	} catch (Exception e) {
-            		tx.rollback(); throw e;
-            	}
-            }
-        }
-
-        Vector leadInstructors = new Vector();
-        if ("updatePref".equals(op)) {
-        	try {
-                List instrLead = form.getInstrLead();
-                List instructors = form.getInstructors();
-
-                for(int i=0; i<instructors.size(); i++) {
-                    String instrId = instructors.get(i).toString();
-                    if (Preference.BLANK_PREF_VALUE.equals(instrId)) continue;
-                    boolean lead = "on".equals(instrLead.get(i)) || "true".equals(instrLead.get(i));
-                    if (lead) leadInstructors.add((DepartmentalInstructorDAO.getInstance()).get(Long.valueOf(instrId)));
-                }
-        		op="init";
-        	} catch (NumberFormatException e) {}
-        }
-
-        if ("updateDatePattern".equals(op)) {        	
-			initPrefs(c, leadInstructors, true);
-			form.getDatePatternPrefs().clear();
-        	form.getDatePatternPrefLevels().clear();
-			DatePattern selectedDatePattern = (form.getDatePattern() < 0 ? c.getSchedulingSubpart().effectiveDatePattern() : DatePatternDAO.getInstance().get(form.getDatePattern()));
-			if (selectedDatePattern != null) {
-				for (DatePattern dp: selectedDatePattern.findChildren()) {
-					boolean found = false;
-					for (DatePatternPref dpp: (Set<DatePatternPref>)c.getPreferences(DatePatternPref.class)) {
-						if (dp.equals(dpp.getDatePattern())) {
-							form.addToDatePatternPrefs(dp.getUniqueId().toString(), dpp.getPrefLevel().getUniqueId().toString());
-							found = true;
-						}
-					}
-					if (!found)
-						for (DatePatternPref dpp: (Set<DatePatternPref>)c.getSchedulingSubpart().getPreferences(DatePatternPref.class)) {
-							if (dp.equals(dpp.getDatePattern())) {
-								form.addToDatePatternPrefs(dp.getUniqueId().toString(), dpp.getPrefLevel().getUniqueId().toString());
-								found = true;
-							}
-						}
-					if (!found)
-						form.addToDatePatternPrefs(dp.getUniqueId().toString(), PreferenceLevel.PREF_LEVEL_NEUTRAL);
-				}
-			}
+		if (MSG.actionUpdatePreferences().equals(op) || MSG.actionNextClass().equals(op) || MSG.actionPreviousClass().equals(op)) {
+			String result = handleUpdatePreferences(c, cdao, timeVertical);
+			if (result != null) return result;
 		}
-        
+
+		Vector leadInstructors = handleUpdatePref();
+
+		handleUpdateDatePatternIfNeeded(c, leadInstructors);
+
         // Initialize Preferences for initial load
-        form.setAvailableTimePatterns(TimePattern.findApplicable(
-        		sessionContext.getUser(),
-        		c.getSchedulingSubpart().getMinutesPerWk(),
-        		(form.getDatePattern() < 0 ? c.getSchedulingSubpart().effectiveDatePattern() : DatePatternDAO.getInstance().get(form.getDatePattern())),
-        		c.getSchedulingSubpart().getInstrOfferingConfig().getDurationModel(),
-        		true,
-        		c.getManagingDept()));
-		Set timePatterns = null;
-        if ("init".equals(op)) {
-        	initPrefs(c, leadInstructors, true);
-		    timePatterns = c.effectiveTimePatterns();
-		    
-		    DatePattern selectedDatePattern = c.effectiveDatePattern();
-			
-			if (selectedDatePattern != null) {
-				for (DatePattern dp: selectedDatePattern.findChildren()) {					
-					if (!form.getDatePatternPrefs().contains(
-							dp.getUniqueId().toString())) {
-						form.addToDatePatternPrefs(dp.getUniqueId().toString(), PreferenceLevel.PREF_LEVEL_NEUTRAL);
-					}
-				}
-			}
-		   
-        }
+		setupAvailableTimePatterns(c);
+
+		Set timePatterns = handleInitTimePatterns(c, leadInstructors);
 
 		// Process Preferences Action
 		processPrefAction();
 
         // Generate Time Pattern Grids
-		super.generateTimePatternGrids(c, 
-				c.getSchedulingSubpart().getMinutesPerWk(),
-        		c.getSchedulingSubpart().getInstrOfferingConfig().getDurationModel(),
-        		(form.getDatePattern() < 0 ? c.getSchedulingSubpart().effectiveDatePattern() : DatePatternDAO.getInstance().get(form.getDatePattern())),
-				timePatterns, op, timeVertical, true, leadInstructors);
+		generateGrids(c, timePatterns, timeVertical, leadInstructors);
 
-		// Instructors
-        setupInstructors(c);
-        setupChildren(c); // Date patterns allowed in the DDL for Date pattern preferences
-        LookupTables.setupDatePatterns(request, sessionContext.getUser(), MSG.dropDefaultDatePattern(), c.getSchedulingSubpart().effectiveDatePattern(), c.getManagingDept(), c.effectiveDatePattern());
-
-        LookupTables.setupRooms(request, c);		 // Rooms
-        LookupTables.setupBldgs(request, c);		 // Buildings
-        LookupTables.setupRoomFeatures(request, c); // Room Features
-        LookupTables.setupRoomGroups(request, c);   // Room Groups
+		setupFormLookups(c);
 
         form.setAllowHardPrefs(sessionContext.hasPermission(c, Right.CanUseHardRoomPrefs));
 
@@ -423,7 +240,7 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
         form.setManagingDeptLabel(managingDept.getManagingDeptLabel());
         form.setUnlimitedEnroll(c.getSchedulingSubpart().getInstrOfferingConfig().isUnlimitedEnrollment());
         form.setAccommodation(StudentAccomodation.toHtml(StudentAccomodation.getAccommodations(c)));
-        
+
         Class_ next = c.getNextClass(sessionContext, Right.ClassEdit);
         form.setNextId(next==null?null:next.getUniqueId().toString());
         Class_ previous = c.getPreviousClass(sessionContext, Right.ClassEdit);
@@ -432,40 +249,43 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
         form.setEnrollment(c.getEnrollment());
         form.setSnapshotLimit(c.getSnapshotLimit());
 
-        // Load from class only for initial load or reload
-        if ("init".equals(op)) {
-	        form.setExpectedCapacity(c.getExpectedCapacity());
-	        form.setDatePattern(c.getDatePattern()==null?Long.valueOf(-1):c.getDatePattern().getUniqueId());
-	        form.setDatePatternEditable(ApplicationProperty.WaitListCanChangeDatePattern.isTrue() || c.getEnrollment() == 0 || !c.getSchedulingSubpart().getInstrOfferingConfig().getInstructionalOffering().effectiveReScheduleNow());
-	        form.setNbrRooms(c.getNbrRooms());
-	        form.setSplitAttendance(c.isRoomsSplitAttendance());
-	        form.setNotes(c.getNotes());
-	        form.setManagingDept(c.getManagingDept().getUniqueId());
-		    form.setSchedulePrintNote(c.getSchedulePrintNote());
-		    form.setClassSuffix(c.getDivSecNumber());
-		    form.setMaxExpectedCapacity(c.getMaxExpectedCapacity());
-		    form.setRoomRatio(c.getRoomRatio());
-		    form.setLms(c.getLms() == null ? "" : c.getLms().getLabel());
-	        if (ApplicationProperty.CoursesFundingDepartmentsEnabled.isTrue()) {
-	        	form.setFundingDept(c.getEffectiveFundingDept().getLabel());
-	        } else {
-	        	form.setFundingDept("");
-	        }
-		    form.setEnabledForStudentScheduling(c.isEnabledForStudentScheduling());
-		    form.setDisplayInstructor(c.isDisplayInstructor());
-
-		    List instructors = new ArrayList(c.getClassInstructors());
-		    Collections.sort(instructors, new InstructorComparator(sessionContext));
-
-	        for(Iterator iter = instructors.iterator(); iter.hasNext(); ) {
-	            ClassInstructor classInstr = (ClassInstructor) iter.next();
-	            form.addToInstructors(classInstr);
-	        }
-
-	        if (instructors.isEmpty())
-	        	form.addToInstructors(null);
-        }
+		// Load from class only for initial load or reload
+		if ("init".equals(op))
+			doLoadInit(c);
     }
+
+	private void doLoadInit(Class_ c) {
+		form.setExpectedCapacity(c.getExpectedCapacity());
+		form.setDatePattern(c.getDatePattern()==null?Long.valueOf(-1):c.getDatePattern().getUniqueId());
+		form.setDatePatternEditable(ApplicationProperty.WaitListCanChangeDatePattern.isTrue() || c.getEnrollment() == 0 || !c.getSchedulingSubpart().getInstrOfferingConfig().getInstructionalOffering().effectiveReScheduleNow());
+		form.setNbrRooms(c.getNbrRooms());
+		form.setSplitAttendance(c.isRoomsSplitAttendance());
+		form.setNotes(c.getNotes());
+		form.setManagingDept(c.getManagingDept().getUniqueId());
+		form.setSchedulePrintNote(c.getSchedulePrintNote());
+		form.setClassSuffix(c.getDivSecNumber());
+		form.setMaxExpectedCapacity(c.getMaxExpectedCapacity());
+		form.setRoomRatio(c.getRoomRatio());
+		form.setLms(c.getLms() == null ? "" : c.getLms().getLabel());
+		if (ApplicationProperty.CoursesFundingDepartmentsEnabled.isTrue()) {
+			form.setFundingDept(c.getEffectiveFundingDept().getLabel());
+		} else {
+			form.setFundingDept("");
+		}
+		form.setEnabledForStudentScheduling(c.isEnabledForStudentScheduling());
+		form.setDisplayInstructor(c.isDisplayInstructor());
+
+		List instructors = new ArrayList(c.getClassInstructors());
+		Collections.sort(instructors, new InstructorComparator(sessionContext));
+
+		for(Iterator iter = instructors.iterator(); iter.hasNext(); ) {
+			ClassInstructor classInstr = (ClassInstructor) iter.next();
+			form.addToInstructors(classInstr);
+		}
+
+		if (instructors.isEmpty())
+			form.addToInstructors(null);
+	}
 
     /**
      * Update class data
@@ -484,13 +304,13 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
 	    //c.setClassSuffix(form.getClassSuffix());
 	    c.setMaxExpectedCapacity(form.getMaxExpectedCapacity());
 	    c.setRoomRatio(form.getRoomRatio());
-	    
+
 	    Boolean disb = form.getEnabledForStudentScheduling();
 	    c.setEnabledForStudentScheduling(disb==null ? Boolean.valueOf(false) : disb);
 
 	    Boolean di = form.getDisplayInstructor();
 	    c.setDisplayInstructor(di==null ? Boolean.valueOf(false) : di);
-	    
+
 	    boolean assignTeachingRequest = Department.isInstructorSchedulingCommitted(c.getControllingDept().getUniqueId());
 
         // Class all instructors
@@ -512,7 +332,7 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
             String resp = instrResponsibility.get(i).toString();
 
             DepartmentalInstructor deptInstr = DepartmentalInstructorDAO.getInstance().get(Long.valueOf(instrId));
-            
+
             ClassInstructor classInstr = null;
             for (Iterator<ClassInstructor> j = classInstrs.iterator(); j.hasNext();) {
             	ClassInstructor adept = j.next();
@@ -605,7 +425,242 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
             request.setAttribute(HASH_ATTR, HASH_INSTRUCTORS);
         }
     }
-    
+
+	private boolean handleLegacyRedirect() throws Exception {
+		if (ApplicationProperty.LegacyClassEdit.isFalse()) {
+			String url = "classEdit";
+			boolean first = true;
+			for (Enumeration<String> e = getRequest().getParameterNames(); e.hasMoreElements(); ) {
+				String param = e.nextElement();
+				url += (first ? "?" : "&") + param + "="
+						+ URLEncoder.encode(getRequest().getParameter(param), "utf-8");
+				first = false;
+			}
+			response.sendRedirect(url);
+			return true;
+		}
+		return false;
+	}
+
+	private String handleClearPreferences(Class_ c, Class_DAO cdao) throws Exception {
+		sessionContext.checkPermission(c, Right.ClassEditClearPreferences);
+		Set s = c.getPreferences();
+		doClear(s, Preference.Type.TIME, Preference.Type.ROOM, Preference.Type.ROOM_FEATURE,
+				Preference.Type.ROOM_GROUP, Preference.Type.BUILDING, Preference.Type.DATE);
+		c.setPreferences(s);
+		cdao.getSession().merge(c);
+		cdao.getSession().flush();
+		op = "init";
+		ChangeLog.addChange(null, sessionContext, c,
+				ChangeLog.Source.CLASS_EDIT, ChangeLog.Operation.CLEAR_PREF,
+				c.getSchedulingSubpart().getInstrOfferingConfig()
+						.getInstructionalOffering().getControllingCourseOffering().getSubjectArea(),
+				c.getManagingDept());
+		return DISPLAY_CLASS_DETAIL;
+	}
+
+	private String handleUpdatePreferences(Class_ c, Class_DAO cdao, boolean timeVertical) throws Exception {
+		form.validate(this);
+		if (hasFieldErrors()) return null;
+		org.hibernate.Session hibSession = cdao.getSession();
+		Transaction tx = hibSession.beginTransaction();
+		try {
+			Set s = c.getPreferences();
+			doClear(s, Preference.Type.TIME, Preference.Type.ROOM, Preference.Type.ROOM_FEATURE,
+					Preference.Type.ROOM_GROUP, Preference.Type.BUILDING, Preference.Type.DATE);
+			doUpdate(c, hibSession);
+			super.doUpdate(c, s, timeVertical,
+					Preference.Type.TIME, Preference.Type.ROOM, Preference.Type.ROOM_FEATURE,
+					Preference.Type.ROOM_GROUP, Preference.Type.BUILDING, Preference.Type.DATE);
+			hibSession.merge(c);
+			tx.commit();
+			String className = ApplicationProperty.ExternalActionClassEdit.value();
+			if (className != null && className.trim().length() > 0) {
+				ExternalClassEditAction editAction = (ExternalClassEditAction)
+						(Class.forName(className).getDeclaredConstructor().newInstance());
+				editAction.performExternalClassEditAction(c, hibSession);
+			}
+			if (MSG.actionNextClass().equals(op)) {
+				response.sendRedirect(response.encodeURL("classEdit.action?cid=" + form.getNextId()));
+				return null;
+			}
+			if (MSG.actionPreviousClass().equals(op)) {
+				response.sendRedirect(response.encodeURL("classEdit.action?cid=" + form.getPreviousId()));
+				return null;
+			}
+			return DISPLAY_CLASS_DETAIL;
+		} catch (Exception e) {
+			tx.rollback(); throw e;
+		}
+	}
+
+	private void handleUpdateDatePattern(Class_ c, Vector leadInstructors) {
+		initPrefs(c, leadInstructors, true);
+		form.getDatePatternPrefs().clear();
+		form.getDatePatternPrefLevels().clear();
+		DatePattern selectedDatePattern = (form.getDatePattern() < 0
+				? c.getSchedulingSubpart().effectiveDatePattern()
+				: DatePatternDAO.getInstance().get(form.getDatePattern()));
+		if (selectedDatePattern == null) return;
+		for (DatePattern dp : selectedDatePattern.findChildren()) {
+			addDatePatternPrefForChild(dp, c);
+		}
+	}
+
+	private void addDatePatternPrefForChild(DatePattern dp, Class_ c) {
+		boolean found = false;
+		for (DatePatternPref dpp : (Set<DatePatternPref>) c.getPreferences(DatePatternPref.class)) {
+			if (dp.equals(dpp.getDatePattern())) {
+				form.addToDatePatternPrefs(dp.getUniqueId().toString(), dpp.getPrefLevel().getUniqueId().toString());
+				found = true;
+			}
+		}
+		if (!found)
+			for (DatePatternPref dpp : (Set<DatePatternPref>) c.getSchedulingSubpart().getPreferences(DatePatternPref.class)) {
+				if (dp.equals(dpp.getDatePattern())) {
+					form.addToDatePatternPrefs(dp.getUniqueId().toString(), dpp.getPrefLevel().getUniqueId().toString());
+					found = true;
+				}
+			}
+		if (!found)
+			form.addToDatePatternPrefs(dp.getUniqueId().toString(), PreferenceLevel.PREF_LEVEL_NEUTRAL);
+	}
+
+	private boolean shouldReadClassIdFromForm(String op) {
+		return MSG.actionAddTimePreference().equals(op)
+				|| MSG.actionAddRoomPreference().equals(op)
+				|| MSG.actionAddBuildingPreference().equals(op)
+				|| MSG.actionAddRoomFeaturePreference().equals(op)
+				|| MSG.actionAddDistributionPreference().equals(op)
+				|| MSG.actionAddInstructor().equals(op)
+				|| MSG.actionUpdatePreferences().equals(op)
+				|| MSG.actionAddDatePatternPreference().equals(op)
+				|| MSG.actionAddAttributePreference().equals(op)
+				|| MSG.actionAddInstructorPreference().equals(op)
+				|| MSG.actionClearClassPreferences().equals(op)
+				|| MSG.actionRemoveBuildingPreference().equals(op)
+				|| MSG.actionRemoveDistributionPreference().equals(op)
+				|| MSG.actionRemoveRoomFeaturePreference().equals(op)
+				|| MSG.actionRemoveRoomGroupPreference().equals(op)
+				|| MSG.actionRemoveRoomPreference().equals(op)
+				|| MSG.actionRemoveDatePatternPreference().equals(op)
+				|| MSG.actionRemoveTimePattern().equals(op)
+				|| MSG.actionRemoveInstructor().equals(op)
+				|| MSG.actionRemoveAttributePreference().equals(op)
+				|| MSG.actionRemoveInstructorPreference().equals(op)
+				|| MSG.actionAddRoomGroupPreference().equals(op)
+				|| MSG.actionBackToDetail().equals(op)
+				|| MSG.actionNextClass().equals(op)
+				|| MSG.actionPreviousClass().equals(op)
+				|| "updateDatePattern".equals(op)
+				|| "updatePref".equals(op);
+	}
+
+	private Vector handleUpdatePref() {
+		Vector leadInstructors = new Vector();
+		if ("updatePref".equals(op)) {
+			try {
+				List instrLead = form.getInstrLead();
+				List instructors = form.getInstructors();
+				for (int i = 0; i < instructors.size(); i++) {
+					String instrId = instructors.get(i).toString();
+					if (Preference.BLANK_PREF_VALUE.equals(instrId)) continue;
+					boolean lead = "on".equals(instrLead.get(i)) || "true".equals(instrLead.get(i));
+					if (lead) leadInstructors.add((DepartmentalInstructorDAO.getInstance()).get(Long.valueOf(instrId)));
+				}
+				op = "init";
+			} catch (NumberFormatException e) {}
+		}
+		return leadInstructors;
+	}
+
+	private Set handleInitTimePatterns(Class_ c, Vector leadInstructors) {
+		Set timePatterns = null;
+		if ("init".equals(op)) {
+			initPrefs(c, leadInstructors, true);
+			timePatterns = c.effectiveTimePatterns();
+			DatePattern selectedDatePattern = c.effectiveDatePattern();
+			if (selectedDatePattern != null) {
+				for (DatePattern dp : selectedDatePattern.findChildren()) {
+					if (!form.getDatePatternPrefs().contains(dp.getUniqueId().toString())) {
+						form.addToDatePatternPrefs(dp.getUniqueId().toString(), PreferenceLevel.PREF_LEVEL_NEUTRAL);
+					}
+				}
+			}
+		}
+		return timePatterns;
+	}
+
+	private void handleInstructorOperations(Class_ c) {
+		if (MSG.actionAddInstructor().equals(op))
+			addInstructor();
+		if (MSG.actionRemoveInstructor().equals(op) && "instructor".equals(deleteType))
+			deleteInstructor();
+	}
+
+	private void setupAvailableTimePatterns(Class_ c) {
+		form.setAvailableTimePatterns(TimePattern.findApplicable(
+				sessionContext.getUser(),
+				c.getSchedulingSubpart().getMinutesPerWk(),
+				(form.getDatePattern() < 0
+						? c.getSchedulingSubpart().effectiveDatePattern()
+						: DatePatternDAO.getInstance().get(form.getDatePattern())),
+				c.getSchedulingSubpart().getInstrOfferingConfig().getDurationModel(),
+				true,
+				c.getManagingDept()));
+	}
+
+	private void setupFormLookups(Class_ c) throws Exception {
+		setupInstructors(c);
+		setupChildren(c);
+		LookupTables.setupDatePatterns(request, sessionContext.getUser(),
+				MSG.dropDefaultDatePattern(),
+				c.getSchedulingSubpart().effectiveDatePattern(),
+				c.getManagingDept(),
+				c.effectiveDatePattern());
+		LookupTables.setupRooms(request, c);
+		LookupTables.setupBldgs(request, c);
+		LookupTables.setupRoomFeatures(request, c);
+		LookupTables.setupRoomGroups(request, c);
+	}
+
+	private void initializeOp() {
+		if (op == null) op = form.getOp();
+		if (op2 != null && !op2.isEmpty()) op = op2;
+	}
+
+	private boolean isClassIdMissing() throws Exception {
+		if (classId == null || classId.trim().isEmpty()) {
+			if (BackTracker.doBack(request, response))
+				return true;
+			else
+				throw new Exception(MSG.errorClassInfoNotSupplied());
+		}
+		return false;
+	}
+
+	private void generateGrids(Class_ c, Set timePatterns, boolean timeVertical, Vector leadInstructors) throws Exception {
+		super.generateTimePatternGrids(c,
+				c.getSchedulingSubpart().getMinutesPerWk(),
+				c.getSchedulingSubpart().getInstrOfferingConfig().getDurationModel(),
+				(form.getDatePattern() < 0
+						? c.getSchedulingSubpart().effectiveDatePattern()
+						: DatePatternDAO.getInstance().get(form.getDatePattern())),
+				timePatterns, op, timeVertical, true, leadInstructors);
+	}
+
+	private void resetFormIfInit() {
+		if ("init".equals(op)) {
+			form.reset();
+		}
+	}
+
+	private void handleUpdateDatePatternIfNeeded(Class_ c, Vector leadInstructors) {
+		if ("updateDatePattern".equals(op)) {
+			handleUpdateDatePattern(c, leadInstructors);
+		}
+	}
+
     /**
      * This method is called to setup children of the selected date pattern of the class
      * or the selected date pattern of the scheduling subpart of the current class.
@@ -614,7 +669,7 @@ public class ClassEditAction extends PreferencesAction2<ClassEditForm> {
 		DatePattern selectedDatePattern = (form.getDatePattern() < 0 ? c.getSchedulingSubpart().effectiveDatePattern() : DatePatternDAO.getInstance().get(form.getDatePattern()));
 		if (selectedDatePattern != null) {
 			List<DatePattern> v =  selectedDatePattern.findChildren();
-			request.setAttribute(DatePattern.DATE_PATTERN_CHILDREN_LIST_ATTR, v);	
+			request.setAttribute(DatePattern.DATE_PATTERN_CHILDREN_LIST_ATTR, v);
 			form.sortDatePatternPrefs(form.getDatePatternPrefs(), form.getDatePatternPrefLevels(), v);
 		}
 	}
