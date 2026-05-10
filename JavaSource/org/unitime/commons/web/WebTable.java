@@ -15,8 +15,8 @@
  *
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
-*/
+ *
+ */
 package org.unitime.commons.web;
 
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ import org.unitime.timetable.security.SessionContext;
 public class WebTable {
 
     /** down arrow */
-	protected static String IMG_DEC = "images/listdir_top_to_bot.gif";
+    protected static String IMG_DEC = "images/listdir_top_to_bot.gif";
 
     /** up arrow */
     protected static String IMG_ASC = "images/listdir_bot_to_top.gif";
@@ -73,21 +73,24 @@ public class WebTable {
 
     /** row style - actually it is cell style */
     protected String iRowStyle = null;
-    
+
     /** suppress row highlighting */
     protected boolean suppressRowHighlight = false;
-    
+
     /** column filter -- hashatable <column key, Boolean> -- true if the column is filtered */
     private Hashtable iColumnFilter = null;
 
     /** column filter -- column keys */
     private String[]  iColumnFilterKeys = null;
-    
+
     protected boolean iBlankWhenSame = false;
-    
+
     protected WebTableTweakStyle iWebTableTweakStyle = null;
     protected WebTableCellStyle iWebTableCellStyle = null;
-    
+
+    private static final String ALIGN_RIGHT = "right";
+    private static final String COLSPAN = " colspan=";
+
     /** creates a WebTable instance */
     public WebTable(int columns, String name, String[] headers, String[] align, boolean[] asc) {
         this(columns, name, null, headers, align, asc);
@@ -110,140 +113,140 @@ public class WebTable {
         iColumnFilter = filter;
         iColumnFilterKeys = keys;
     }
-    
+
     public void setWebTableTweakStyle(WebTableTweakStyle style) {
-    	iWebTableTweakStyle = style;
+        iWebTableTweakStyle = style;
     }
-    
+
     public void setCellStyle(WebTableCellStyle style) {
-    	iWebTableCellStyle = style;
+        iWebTableCellStyle = style;
     }
-    
+
     public String getStyle(WebTableLine line, WebTableLine next, int order) {
-    	String style = (iRowStyle==null?"":iRowStyle+";")+(iWebTableTweakStyle==null?"":iWebTableTweakStyle.getStyleHtml(line, next, order));
-    	return (style==null || style.length()==0? "" : "style=\""+style+"\"");
+        String style = (iRowStyle==null?"":iRowStyle+";")+(iWebTableTweakStyle==null?"":iWebTableTweakStyle.getStyleHtml(line, next, order));
+        return (style==null || style.length()==0? "" : "style=\""+style+"\"");
     }
-    
+
     public String getCellStyle(WebTableLine line, int column, String defaultStyle) {
-    	String style = (iWebTableCellStyle == null ? null : iWebTableCellStyle.getCellStyleHtml(line, column));
-    	return (style == null ? defaultStyle : "style=\""+style+"\"");
+        String style = (iWebTableCellStyle == null ? null : iWebTableCellStyle.getCellStyleHtml(line, column));
+        return (style == null ? defaultStyle : "style=\""+style+"\"");
     }
-    
+
     /** sets row (cell) style */
     public void setRowStyle(String style) {
         iRowStyle = (iRowStyle == null ? "" : iRowStyle + ";") + style;
     }
-    
+
     /** sets row highlight suppression */
     public void setSuppressRowHighlight(boolean suppress) {
         suppressRowHighlight = suppress;
     }
-    
+
     /** enable horizontal lines */
     public void enableHR() {
         setRowStyle("border-bottom: rgb(81,81,81) 1px solid");
     }
-    
+
     /** enable horizontal lines */
     public void enableHR(String colorCode) {
         setRowStyle("border-bottom: 1px dashed " + colorCode);
     }
-    
+
     /** add line to the table */
     public WebTableLine addLine(String[] line, Comparable[] orderby) {
-        WebTableLine wtline = new WebTableLine(null, line, orderby); 
+        WebTableLine wtline = new WebTableLine(null, line, orderby);
         iLines.addElement(wtline);
         return wtline;
     }
-    
+
     /** add line to the table */
     public WebTableLine addLine(String onClick, String[] line, Comparable[] orderby, String uniqueId) {
-        WebTableLine wtline = new WebTableLine(onClick, line, orderby, uniqueId); 
+        WebTableLine wtline = new WebTableLine(onClick, line, orderby, uniqueId);
         iLines.addElement(wtline);
         return wtline;
     }
 
-	/** add line to the table */
-	public WebTableLine addLine(String onClick, String[] line, Comparable[] orderby) {
-		return addLine(onClick, line, orderby,null);
-	}
-   
-    public WebTableLine replaceLine(int index, String onClick, String[] line, Comparable[] orderby){
-    	return replaceLine(index, onClick, line, null, null);
+    /** add line to the table */
+    public WebTableLine addLine(String onClick, String[] line, Comparable[] orderby) {
+        return addLine(onClick, line, orderby,null);
     }
-    
-	public WebTableLine replaceLine(int index, String onClick, String[] line, Comparable[] orderby, String uniqueId){
-		if (index >= 0 && index < iLines.size()){
-			iLines.remove(index);
-            WebTableLine wtline = new WebTableLine(onClick, line, orderby, uniqueId);
-			iLines.add(index, wtline);
-            return wtline;
-		}
-        return null;
-	}
 
-	/* 
-	 * Return the index of the line containing uniqueId
-	 * Returns -1 if not found
-	 */
-	public int indexOfLine (String uniqueId) {
-		int indx = 0;
-		boolean found = false;
-		for (indx = 0; indx < iLines.size() && !found; indx++) {
-			WebTableLine wtLine = (WebTableLine) iLines.get(indx);
-			if (wtLine.getUniqueId().equals(uniqueId))
-				found = true; 
-		}
-		if (found) {
-			return --indx;
-		} else {
-			return -1;
-		}
-	}
-	
-	/* 
-	 * Return  line containing uniqueId
-	 * Returns null if not found
-	 */
-	public WebTableLine findLine (String uniqueId) {
-		int indx = indexOfLine(uniqueId);
-		if (indx >= 0)
-			return (WebTableLine) iLines.get(indx);
-		else
-			return null;
-	}
-	
-	/* 
-	 * Return next uniqueId after line containing uniqueId
-	 * Returns null if not found
-	 */
-	public String nextUniqueId (String uniqueId) {
-		int indx = indexOfLine(uniqueId);
-		if (indx < 0 || indx >= iLines.size() - 1) {
-			return null;
-		} else {
-			return ((WebTableLine) iLines.get(indx + 1)).getUniqueId();
-		}
-	}
-	
-	/* 
-	 * Return previous uniqueId to line containing uniqueId
-	 * Returns null if not found
-	 */
-	public String previousUniqueId (String uniqueId) {
-		int indx = indexOfLine(uniqueId);
-		if (indx <= 0 ) {
-			return null;
-		} else {
-			return ((WebTableLine) iLines.get(indx - 1)).getUniqueId();
-		}
-	}
+    public WebTableLine replaceLine(int index, String onClick, String[] line, Comparable[] orderby){
+        return replaceLine(index, onClick, line, null, null);
+    }
+
+    public WebTableLine replaceLine(int index, String onClick, String[] line, Comparable[] orderby, String uniqueId){
+        if (index >= 0 && index < iLines.size()){
+            iLines.remove(index);
+            WebTableLine wtline = new WebTableLine(onClick, line, orderby, uniqueId);
+            iLines.add(index, wtline);
+            return wtline;
+        }
+        return null;
+    }
+
+    /*
+     * Return the index of the line containing uniqueId
+     * Returns -1 if not found
+     */
+    public int indexOfLine (String uniqueId) {
+        int indx = 0;
+        boolean found = false;
+        for (indx = 0; indx < iLines.size() && !found; indx++) {
+            WebTableLine wtLine = (WebTableLine) iLines.get(indx);
+            if (wtLine.getUniqueId().equals(uniqueId))
+                found = true;
+        }
+        if (found) {
+            return --indx;
+        } else {
+            return -1;
+        }
+    }
+
+    /*
+     * Return  line containing uniqueId
+     * Returns null if not found
+     */
+    public WebTableLine findLine (String uniqueId) {
+        int indx = indexOfLine(uniqueId);
+        if (indx >= 0)
+            return (WebTableLine) iLines.get(indx);
+        else
+            return null;
+    }
+
+    /*
+     * Return next uniqueId after line containing uniqueId
+     * Returns null if not found
+     */
+    public String nextUniqueId (String uniqueId) {
+        int indx = indexOfLine(uniqueId);
+        if (indx < 0 || indx >= iLines.size() - 1) {
+            return null;
+        } else {
+            return ((WebTableLine) iLines.get(indx + 1)).getUniqueId();
+        }
+    }
+
+    /*
+     * Return previous uniqueId to line containing uniqueId
+     * Returns null if not found
+     */
+    public String previousUniqueId (String uniqueId) {
+        int indx = indexOfLine(uniqueId);
+        if (indx <= 0 ) {
+            return null;
+        } else {
+            return ((WebTableLine) iLines.get(indx - 1)).getUniqueId();
+        }
+    }
 
     /** returns table's HTML code */
     public String printTable() {
         return printTable(0);
     }
-    
+
     /** is column filtered? */
     protected boolean isFiltered(int col) {
         if (iColumnFilter == null) {
@@ -255,7 +258,7 @@ public class WebTable {
                 ? ((Boolean) iColumnFilter.get(name)).booleanValue()
                 : false);
     }
-    
+
     public int getNrFilteredColumns() {
         if (iColumnFilter==null) return 0;
         int ret = 0;
@@ -264,153 +267,50 @@ public class WebTable {
         }
         return ret;
     }
-    
+
     protected static String align(String alignment, boolean rtl) {
-    	if (rtl && "left".equalsIgnoreCase(alignment)) return "right";
-    	return alignment;
+        if (rtl && "left".equalsIgnoreCase(alignment)) return ALIGN_RIGHT;
+        return alignment;
     }
-    
+
     /** returns table's HTML code, table is ordered by ordCol-th column */
     public String printTable(int ordCol) {
         String lastLine[] = new String[Math.max(iColumns,(iHeaders==null?0:iHeaders.length))];
         StringBuffer sb = new StringBuffer();
         boolean rtl = Localization.isRTL();
-        
-        if (iName != null && iName.trim().length()>0) {
-            sb.append("<tr><td colspan=" + iColumns
-                    + "><div class=WelcomeRowHead>" + iName + "</div></td></tr>");
-        }
+
+        appendNameRow(sb);
 
         sb.append("<tr><td colspan='" + iColumns + "'><div class='unitime-LegacyWebTable'><table width='100%' border='0' cellspacing='0' cellpadding='3'>");
-        
-        boolean asc = (ordCol == 0 || iAsc == null
-                || iAsc.length <= Math.abs(ordCol) - 1
-                ? true
-                : iAsc[Math.abs(ordCol) - 1]);
 
-        if (ordCol < 0) {
-            asc = !asc;
-        }
-        if (iHeaders != null) {
-            sb.append("<tr valign='top'>");
-            int last = iColumns - iHeaders.length + 1;
+        boolean asc = resolveAsc(ordCol);
 
-            for (int i = 0; i < iHeaders.length; i++) {
-                if (!isFiltered(i)) {
-                    if (iHeaders[i] != null) {
-                        String header = ToolBox.replace((iRef == null
-                                || iLines.size() == 0
-                                || ((WebTableLine) iLines.elementAt(0)).getOrderBy()
-                                        == null
-                                || ((WebTableLine) iLines.elementAt(0)).getOrderBy()[i]
-                                        == null
-                                ? iHeaders[i]
-                                : "<A title=\"Order by this column.\" href=\""
-                                	+ iRef + "\" class=\"sortHeader\">"
-                                	+ (i == Math.abs(ordCol) - 1 ? (asc ? "&uarr;" : "&darr;") : "")
-                                			/*
-                                            ? "<img class='WebTableOrderArrow' src='"
-                                                    + (asc
-                                                            ? IMG_ASC
-                                                            : IMG_DEC)
-                                                    + "' border='0'>"
-                                            : "") */ 
-                                    + iHeaders[i]
-                                    + "</A>"
-                                        ),
-                                "%%",
-                                String.valueOf(i == Math.abs(ordCol) - 1
-                                ? -ordCol
-                                : i + 1));
+        appendHeaderRow(sb, ordCol, asc, rtl);
 
-                        sb.append("<td align=\""
-                                + (iAlign != null ? align(iAlign[i], rtl) : (rtl ? "right" : "left")) + "\""
-                                + (i == iHeaders.length - 1
-                                        ? " colspan=" + last + " "
-                                        : "") + " class=\"WebTableHeader\">" + header + "</td>");
-                    } else {
-                        sb.append("<td class=\"WebTableHeader\" "
-                                + (i == iHeaders.length - 1
-                                        ? " colspan=" + last + " "
-                                        : "")
-                                + ">&nbsp;</td>");
-                    }
-                }
-            }
-            sb.append("</tr>");
-        }
-        if (ordCol != 0) {
-            Collections.sort(iLines,
-                    new WebTableComparator(Math.abs(ordCol) - 1, asc));
-        }
-        for (int el = 0; el < iLines.size(); el++) {
-            WebTableLine wtline = (WebTableLine) iLines.elementAt(el);
-            String[] line = wtline.getLine();
-            String onClick = wtline.getOnClick();
-            String lineStyle = wtline.getStyle();
-            String bgColor = wtline.getBgColor();
-            if (bgColor != null) {
-            	if (lineStyle == null)
-            		lineStyle = "background-color:" + bgColor + ";";
-            	else
-            		lineStyle += "background-color:" + bgColor + ";";
-            }
-            String title = wtline.getTitle();
-            String style = getStyle(wtline, (el+1<iLines.size()?(WebTableLine)iLines.elementAt(el+1):null), ordCol);
-            int last = iColumns - line.length + 1;
-            boolean anchor = (onClick != null && onClick.startsWith("<"));
 
-			sb.append("\n");
-            sb.append((anchor ? onClick : "") + "<tr valign='top' "
-                    + (onClick == null || anchor ? "" : onClick)
-                    + (lineStyle == null ? "" : " style='" + lineStyle + "'")
-                    + (!suppressRowHighlight ? " onmouseover=\"this.style.backgroundColor='rgb(223,231,242)';" : "") 
-                    + "this.style.cursor='"
-                    + (onClick == null ? "default" : "hand") 
-                    + (onClick != null ? "';this.style.cursor='pointer" : "")
-                    + "';\"" 
-                    + (!suppressRowHighlight ? "onmouseout=\"this.style.backgroundColor='"+(bgColor==null?"transparent":bgColor)+"';\"" : "")
-                    + (title == null ? "" : " title='" + title + "'")
-                    + (onClick != null && !anchor ? " tabindex='0' height='24px' onkeydown='if (window.event.keyCode == 13) this.click();'": "")
-                    + ">");
-            boolean blank = iBlankWhenSame;
-            for (int i = 0; i < line.length; i++) {
-                if (!isFiltered(i)) {
-                    if (blank && line[i]!=null && !line[i].equals(lastLine[i]))
-                        blank=false;
-                    if (!blank && line[i] != null) {
-                        sb.append("<td "
-                                + getCellStyle(wtline, i, style)
-                                + " align=\""
-                                + (iAlign != null ? align(iAlign[i], rtl) : (rtl ? "right" : "left"))
-                                + "\""
-                                + (i == line.length - 1
-                                        ? " colspan=" + last + " "
-                                        : "")
-                                + ">"
-                                + (i == 0 && wtline.getUniqueId() != null ? "<A name=\""+wtline.iUniqueId+"\" ></A>" : "")
-                                + line[i]
-                                + "</td>");
-                    } else {
-                        sb.append("<td "
-                        		+ getCellStyle(wtline, i, style)
-                                + " "
-                                + (i == line.length - 1
-                                        ? " colspan=" + last + " "
-                                        : "")
-                                + ">&nbsp;</td>");
-                    }
-                    if (i<lastLine.length) lastLine[i] = line[i]; 
-                }
-            }
-            sb.append("</tr>" + (anchor ? "</a>" : ""));
-        }
-        
+        appendAllRows(sb, ordCol, asc, lastLine, rtl);
+
         sb.append("</table></div></td></tr>");
-        
+
         return sb.toString();
     }
-    
+
+    private void appendCsvLines(CSVFile file, String[] lastLine) {
+        for (Enumeration el = iLines.elements(); el.hasMoreElements();) {
+            WebTableLine wtline = (WebTableLine) el.nextElement();
+            String[] line = wtline.getLine();
+            Vector cline = new Vector();
+            boolean blank = iBlankWhenSame;
+            for (int i = 0; i < line.length; i++) {
+                if (isFiltered(i)) continue;
+                if (blank && line[i] != null && !line[i].equals(lastLine[i])) blank = false;
+                cline.add(new CSVField(blank || line[i] == null ? "" : line[i]));
+                lastLine[i] = line[i];
+            }
+            file.addLine(cline);
+        }
+    }
+
     public CSVFile toCSVFile(int ordCol) {
         CSVFile file = new CSVFile();
         if (iHeaders != null) {
@@ -424,35 +324,21 @@ public class WebTable {
         if (ordCol < 0) asc = !asc;
         if (ordCol != 0) Collections.sort(iLines, new WebTableComparator(Math.abs(ordCol) - 1, asc));
         String lastLine[] = new String[Math.max(iColumns,(iHeaders==null?0:iHeaders.length))];
-        for (Enumeration el = iLines.elements(); el.hasMoreElements();) {
-            WebTableLine wtline = (WebTableLine) el.nextElement();
-            String[] line = wtline.getLine();
-            Vector cline = new Vector();
-            boolean blank = iBlankWhenSame;
-            for (int i=0; i<line.length; i++) {
-                if (isFiltered(i)) continue;
-                if (blank && line[i]!=null && !line[i].equals(lastLine[i])) blank=false;
-
-                cline.add(new CSVField(blank || line[i]==null?"":line[i]));
-                lastLine[i] = line[i];
-            }
-            file.addLine(cline);
-        }
+        appendCsvLines(file, lastLine);
         return file;
     }
-    
     public int getNrColumns() {
         return iColumns - getNrFilteredColumns();
     }
-    
+
     public String[] getHeader() {
         return iHeaders;
     }
-    
+
     public boolean isBlankWhenSame() {
         return iBlankWhenSame;
     }
-    
+
     public void setBlankWhenSame(boolean blankWhenSame) {
         iBlankWhenSame = blankWhenSame;
     }
@@ -468,14 +354,14 @@ public class WebTable {
 
         /** onclick event */
         private String iOnClick = null;
-        
+
         /** String uniquely identifying the line */
         private String iUniqueId = null;
-        
+
         private String iBgColor = null;
         private String iStyle = null;
         private String iTitle = null;
-        
+
         /** constructor */
         WebTableLine(String onClick, String[] line, Comparable[] orderby) {
             iOnClick = onClick;
@@ -483,12 +369,12 @@ public class WebTable {
             iOrderBy = orderby;
         }
 
-		/** constructor */
-		 WebTableLine(String onClick, String[] line, Comparable[] orderby, String uniqueId) {
-		 	this(onClick, line, orderby);
-			iUniqueId = uniqueId;
-		 }
-        
+        /** constructor */
+        WebTableLine(String onClick, String[] line, Comparable[] orderby, String uniqueId) {
+            this(onClick, line, orderby);
+            iUniqueId = uniqueId;
+        }
+
         public String getOnClick() {
             return iOnClick;
         }
@@ -496,11 +382,11 @@ public class WebTable {
         public String[] getLine() {
             return iLine;
         }
-        
+
         public Comparable[] getOrderBy() {
             return iOrderBy;
         }
-        
+
         /** compare two lines according to the given column and order direction */
         public int compareTo(WebTableLine another, int column, boolean asc) {
             if (column < 0 || iOrderBy == null || iOrderBy.length <= column) {
@@ -516,11 +402,11 @@ public class WebTable {
             int ret = (a == null
                     ? (b == null ? 0 : -1)
                     : b == null
-                            ? 1
-                            : a instanceof String && b instanceof String
-                                    ? (asc ? 1 : -1)
-                                            * noc.compare((String) a, (String) b)
-                                    : (asc ? 1 : -1) * a.compareTo(b));
+                    ? 1
+                    : a instanceof String && b instanceof String
+                    ? (asc ? 1 : -1)
+                    * noc.compare((String) a, (String) b)
+                    : (asc ? 1 : -1) * a.compareTo(b));
 
             if (ret != 0) {
                 return ret;
@@ -531,69 +417,69 @@ public class WebTable {
                 ret = (a == null
                         ? (b == null ? 0 : -1)
                         : b == null
-                                ? 1
-                                : a instanceof String && b instanceof String
-                                        ? (asc ? 1 : -1)
-                                                * noc.compare((String) a, (String) b)
-                                        : (asc ? 1 : -1) * a.compareTo(b));
+                        ? 1
+                        : a instanceof String && b instanceof String
+                        ? (asc ? 1 : -1)
+                        * noc.compare((String) a, (String) b)
+                        : (asc ? 1 : -1) * a.compareTo(b));
                 if (ret != 0) {
                     return ret;
                 }
             }
             return ret;
         }
-        
-		/**
-		 * @return
-		 */
-		public String getUniqueId() {
-			return iUniqueId;
-		}
 
-		/**
-		 * @param String
-		 */
-		public void setUniqueId(String uniqueId) {
-			iUniqueId = uniqueId;
-		}
-        
+        /**
+         * @return
+         */
+        public String getUniqueId() {
+            return iUniqueId;
+        }
+
+        /**
+         * @param String
+         */
+        public void setUniqueId(String uniqueId) {
+            iUniqueId = uniqueId;
+        }
+
         public void setBgColor(String bgColor) {
             iBgColor = bgColor;
         }
-        
+
         public String getBgColor() {
             return iBgColor;
         }
 
         public void setTitle(String title) {
-        	iTitle = title;
+            iTitle = title;
         }
-        
+
         public String getTitle() {
-        	return iTitle;
+            return iTitle;
         }
-        
+
         public void setStyle(String style) {
-        	iStyle = style;
+            iStyle = style;
         }
-        
+
         public String getStyle() {
-        	return iStyle;
+            return iStyle;
         }
     }
-    
+
 
     /** Table lines comparator */
     public static class WebTableComparator implements Comparator {
         private int iColumn = 1;
         private boolean iAsc = true;
-        
+
         /** constructor -- order column and order direction */
         public WebTableComparator(int column, boolean asc) {
             iColumn = column;
             iAsc = asc;
         }
-        
+
         /** compares two lines */
         public int compare(Object o1, Object o2) {
             if (o1 == null || o2 == null || !(o1 instanceof WebTableLine)
@@ -605,7 +491,7 @@ public class WebTable {
 
             return w1.compareTo(w2, iColumn, iAsc);
         }
-        
+
         /** compares two lines */
         public boolean equals(Object obj) {
             if (obj == null || !(obj instanceof WebTableComparator)) {
@@ -616,8 +502,8 @@ public class WebTable {
             return (wtc.iAsc == iAsc && wtc.iColumn == iColumn);
         }
     }
-    
-    /** get order (index of ordered column) for given session and table 
+
+    /** get order (index of ordered column) for given session and table
      * @param context session context
      * @param code table code
      * @return index of ordered column (negative for desc.) */
@@ -630,23 +516,23 @@ public class WebTable {
         return (orderInfo.containsKey(code)?((Integer)orderInfo.get(code)).intValue():0);
     }
 
-    /** set order (index of ordered column) for given session and table 
+    /** set order (index of ordered column) for given session and table
      * @param context session context
      * @param code table code
      * @param order new order (index of ordered column, negative if desc.)
-     * @param defOrder default order (if order is null) 
+     * @param defOrder default order (if order is null)
      */
     public static void setOrder(SessionContext context, String code, String order, int defOrder) {
         Hashtable orderInfo = (Hashtable)context.getAttribute(SessionAttribute.TableOrder);
         if (orderInfo==null) {
             orderInfo = new Hashtable();
             context.setAttribute(SessionAttribute.TableOrder, orderInfo);
-        } 
+        }
         if (order!=null) orderInfo.put(code,Integer.valueOf(order));
         else if (!orderInfo.containsKey(code)) orderInfo.put(code,Integer.valueOf(defOrder));
     }
 
-    /** set order (index of ordered column) for given session and table 
+    /** set order (index of ordered column) for given session and table
      * @param session session
      * @param code table code
      * @param order new order (index of ordered column, negative if desc.)
@@ -660,88 +546,216 @@ public class WebTable {
         }
         orderInfo.put(code,Integer.valueOf(order));
     }
-    
-    
+
+
     public Vector getLines() {
         return iLines;
     }
-    
+
     public void setRef(String ref) { iRef = ref; }
     public void setName(String name) { iName = name; }
-    
+
     public static interface WebTableTweakStyle {
-    	public String getStyleHtml(WebTableLine currentLine, WebTableLine nextLine, int orderBy);
+        public String getStyleHtml(WebTableLine currentLine, WebTableLine nextLine, int orderBy);
     }
-    
+
     public static interface WebTableCellStyle {
-    	public String getCellStyleHtml(WebTableLine currentLine, int column);
+        public String getCellStyleHtml(WebTableLine currentLine, int column);
     }
-    
-	protected CSVField csvField(String text) {
-		if (text == null) return new CSVField("");
-		if (text.indexOf("@@")<0) return new CSVField(text); 
-		
-		String cell = "";
-		boolean first = true;
-		for (StringTokenizer s = new StringTokenizer(text,"\n"); s.hasMoreTokens();) {
-			String line = s.nextToken();
-			int pos = 0;
-			while (true) {
-				int idx = line.indexOf("@@", pos);
-				if (idx < 0) {
-					cell += (!first && pos==0?"\n":"") + line.substring(pos);
-					break;
-				} else {
-					cell += (!first && pos==0?"\n":"") + line.substring(pos, idx);
-					pos = idx;
-				}
-				pos+=2; //for @@
-				String cmd = line.substring(pos, line.indexOf(' ',pos));
-				pos+=cmd.length()+1;
-				if ("COLOR".equals(cmd)) {
-					String hex = line.substring(pos, line.indexOf(' ',pos));
-					pos+=hex.length()+1;
-					if (hex.startsWith("#")) hex = hex.substring(1);
-				}
+
+    protected CSVField csvField(String text) {
+        if (text == null) return new CSVField("");
+        if (text.indexOf("@@")<0) return new CSVField(text);
+
+        String cell = "";
+        boolean first = true;
+        for (StringTokenizer s = new StringTokenizer(text,"\n"); s.hasMoreTokens();) {
+            String line = s.nextToken();
+            int pos = 0;
+            while (true) {
+                int idx = line.indexOf("@@", pos);
+                if (idx < 0) {
+                    cell += (!first && pos==0?"\n":"") + line.substring(pos);
+                    break;
+                } else {
+                    cell += (!first && pos==0?"\n":"") + line.substring(pos, idx);
+                    pos = idx;
+                }
+                pos+=2; //for @@
+                String cmd = line.substring(pos, line.indexOf(' ',pos));
+                pos+=cmd.length()+1;
+                if ("COLOR".equals(cmd)) {
+                    String hex = line.substring(pos, line.indexOf(' ',pos));
+                    pos+=hex.length()+1;
+                    if (hex.startsWith("#")) hex = hex.substring(1);
+                }
                 if ("BGCOLOR".equals(cmd)) {
                     String hex = line.substring(pos, line.indexOf(' ',pos));
                     pos+=hex.length()+1;
-					if (hex.startsWith("#")) hex = hex.substring(1);
+                    if (hex.startsWith("#")) hex = hex.substring(1);
                 }
-				if ("IMAGE".equals(cmd)) {
-					String name = line.substring(pos, line.indexOf(' ',pos));
-					pos+=name.length()+1;
-				}
-				if ("BORDER_ALL".equals(cmd) 
-						|| "BORDER_TOP".equals(cmd)	|| "BORDER_BOTTOM".equals(cmd) 
-						|| "BORDER_LEFT".equals(cmd) || "BORDER_RIGHT".equals(cmd) ) {
-					
-					String hex = line.substring(pos, line.indexOf(' ',pos));
-					pos+=hex.length()+1;
-					if (hex.startsWith("#")) hex = hex.substring(1);
-				}
-			}
-			first=false;
-		}
-		
-		return new CSVField(cell);
-	}
-	
-	/**
-	 * Prints csv table.
-	 * @param ordCol
-	 * @return
-	 */
-	public CSVFile printCsvTable(int ordCol) {
-		CSVFile csv = new CSVFile();
-    	
+                if ("IMAGE".equals(cmd)) {
+                    String name = line.substring(pos, line.indexOf(' ',pos));
+                    pos+=name.length()+1;
+                }
+                if ("BORDER_ALL".equals(cmd)
+                        || "BORDER_TOP".equals(cmd)	|| "BORDER_BOTTOM".equals(cmd)
+                        || "BORDER_LEFT".equals(cmd) || "BORDER_RIGHT".equals(cmd) ) {
+
+                    String hex = line.substring(pos, line.indexOf(' ',pos));
+                    pos+=hex.length()+1;
+                    if (hex.startsWith("#")) hex = hex.substring(1);
+                }
+            }
+            first=false;
+        }
+
+        return new CSVField(cell);
+    }
+
+    private void appendHeaderCell(StringBuffer sb, int i, int last, int ordCol, boolean asc, boolean rtl) {
+        if (iHeaders[i] != null) {
+            String header = ToolBox.replace(buildHeaderText(i, ordCol, asc), "%%", String.valueOf(i == Math.abs(ordCol) - 1 ? -ordCol : i + 1));
+            sb.append("<td align=\""
+                    + (iAlign != null ? align(iAlign[i], rtl) : (rtl ? ALIGN_RIGHT : "left")) + "\""
+                    + (i == iHeaders.length - 1 ? COLSPAN + last + " " : "")
+                    + " class=\"WebTableHeader\">" + header + "</td>");
+        } else {
+            sb.append("<td class=\"WebTableHeader\" "
+                    + (i == iHeaders.length - 1 ? COLSPAN + last + " " : "")
+                    + ">&nbsp;</td>");
+        }
+    }
+
+    private String buildHeaderText(int i, int ordCol, boolean asc) {
+        return (iRef == null
+                || iLines.size() == 0
+                || ((WebTableLine) iLines.elementAt(0)).getOrderBy() == null
+                || ((WebTableLine) iLines.elementAt(0)).getOrderBy()[i] == null
+                ? iHeaders[i]
+                : "<A title=\"Order by this column.\" href=\""
+                + iRef + "\" class=\"sortHeader\">"
+                + (i == Math.abs(ordCol) - 1 ? (asc ? "&uarr;" : "&darr;") : "")
+                + iHeaders[i]
+                + "</A>");
+    }
+
+    private void appendRowOpen(StringBuffer sb, String onClick, boolean anchor, String lineStyle, String bgColor, String title) {
+        sb.append((anchor ? onClick : "") + "<tr valign='top' "
+                + (onClick == null || anchor ? "" : onClick)
+                + (lineStyle == null ? "" : " style='" + lineStyle + "'")
+                + (!suppressRowHighlight ? " onmouseover=\"this.style.backgroundColor='rgb(223,231,242)';" : "")
+                + "this.style.cursor='"
+                + (onClick == null ? "default" : "hand")
+                + (onClick != null ? "';this.style.cursor='pointer" : "")
+                + "';\""
+                + (!suppressRowHighlight ? "onmouseout=\"this.style.backgroundColor='" + (bgColor == null ? "transparent" : bgColor) + "';\"" : "")
+                + (title == null ? "" : " title='" + title + "'")
+                + (onClick != null && !anchor ? " tabindex='0' height='24px' onkeydown='if (window.event.keyCode == 13) this.click();'" : "")
+                + ">");
+    }
+
+    private void appendDataCell(StringBuffer sb, WebTableLine wtline, String[] line, int i, int last, String style, boolean blank, boolean rtl) {
+        if (!blank && line[i] != null) {
+            sb.append("<td "
+                    + getCellStyle(wtline, i, style)
+                    + " align=\""
+                    + (iAlign != null ? align(iAlign[i], rtl) : (rtl ? ALIGN_RIGHT : "left"))
+                    + "\""
+                    + (i == line.length - 1 ? COLSPAN + last + " " : "")
+                    + ">"
+                    + (i == 0 && wtline.getUniqueId() != null ? "<A name=\"" + wtline.iUniqueId + "\" ></A>" : "")
+                    + line[i]
+                    + "</td>");
+        } else {
+            sb.append("<td "
+                    + getCellStyle(wtline, i, style)
+                    + " "
+                    + (i == line.length - 1 ? COLSPAN + last + " " : "")
+                    + ">&nbsp;</td>");
+        }
+    }
+
+    private boolean resolveAsc(int ordCol) {
+        boolean asc = (ordCol == 0 || iAsc == null
+                || iAsc.length <= Math.abs(ordCol) - 1
+                ? true
+                : iAsc[Math.abs(ordCol) - 1]);
+        if (ordCol < 0) asc = !asc;
+        return asc;
+    }
+
+    private void appendNameRow(StringBuffer sb) {
+        if (iName != null && iName.trim().length() > 0) {
+            sb.append("<tr><td " + COLSPAN + iColumns
+                    + "><div class=WelcomeRowHead>" + iName + "</div></td></tr>");
+        }
+    }
+
+    private void appendHeaderRow(StringBuffer sb, int ordCol, boolean asc, boolean rtl) {
+        if (iHeaders == null) return;
+        sb.append("<tr valign='top'>");
+        int last = iColumns - iHeaders.length + 1;
+        for (int i = 0; i < iHeaders.length; i++) {
+            if (!isFiltered(i)) {
+                appendHeaderCell(sb, i, last, ordCol, asc, rtl);
+            }
+        }
+        sb.append("</tr>");
+    }
+
+    private void appendAllRows(StringBuffer sb, int ordCol, boolean asc, String[] lastLine, boolean rtl) {
+        if (ordCol != 0) {
+            Collections.sort(iLines, new WebTableComparator(Math.abs(ordCol) - 1, asc));
+        }
+        for (int el = 0; el < iLines.size(); el++) {
+            WebTableLine wtline = (WebTableLine) iLines.elementAt(el);
+            String[] line = wtline.getLine();
+            String onClick = wtline.getOnClick();
+            String lineStyle = wtline.getStyle();
+            String bgColor = wtline.getBgColor();
+            if (bgColor != null) {
+                lineStyle = (lineStyle == null ? "" : lineStyle) + "background-color:" + bgColor + ";";
+            }
+            String title = wtline.getTitle();
+            String style = getStyle(wtline, (el + 1 < iLines.size() ? (WebTableLine) iLines.elementAt(el + 1) : null), ordCol);
+            int last = iColumns - line.length + 1;
+            boolean anchor = (onClick != null && onClick.startsWith("<"));
+
+            sb.append("\n");
+            appendRowOpen(sb, onClick, anchor, lineStyle, bgColor, title);
+            appendRowCells(sb, wtline, line, last, style, lastLine, rtl);
+            sb.append("</tr>" + (anchor ? "</a>" : ""));
+        }
+    }
+
+    private void appendRowCells(StringBuffer sb, WebTableLine wtline, String[] line, int last, String style, String[] lastLine, boolean rtl) {
+        boolean blank = iBlankWhenSame;
+        for (int i = 0; i < line.length; i++) {
+            if (!isFiltered(i)) {
+                if (blank && line[i] != null && !line[i].equals(lastLine[i]))
+                    blank = false;
+                appendDataCell(sb, wtline, line, i, last, style, blank, rtl);
+                if (i < lastLine.length) lastLine[i] = line[i];
+            }
+        }
+    }
+
+    /**
+     * Prints csv table.
+     * @param ordCol
+     * @return
+     */
+    public CSVFile printCsvTable(int ordCol) {
+        CSVFile csv = new CSVFile();
+
         boolean asc = (ordCol == 0 || iAsc == null || iAsc.length <= Math.abs(ordCol) - 1 ? true : iAsc[Math.abs(ordCol) - 1]);
         if (ordCol < 0) asc = !asc;
 
         String lastLine[] = new String[Math.max(iColumns,(iHeaders==null?0:iHeaders.length))];
-        
+
         if (iHeaders != null) {
-        	List<CSVField> line = new ArrayList<CSVField>();
+            List<CSVField> line = new ArrayList<CSVField>();
             for (int i = 0; i < iColumns; i++) {
                 if (isFiltered(i)) continue;
                 line.add(csvField(iHeaders[i]));
@@ -759,11 +773,11 @@ public class WebTable {
                 if (isFiltered(i)) continue;
                 if (blank && wtline.getLine()[i]!=null && !wtline.getLine()[i].equals(lastLine[i])) blank=false;
                 line.add(csvField(wtline.getLine()[i]));
-            	lastLine[i] = wtline.getLine()[i];
+                lastLine[i] = wtline.getLine()[i];
             }
             csv.addLine(line);
         }
-        
+
         return csv;
     }
 }
