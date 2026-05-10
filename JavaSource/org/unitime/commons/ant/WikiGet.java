@@ -73,18 +73,19 @@ public class WikiGet extends Task {
     public boolean copy(URL url, File file) {
         try {
             System.out.print("  Get: "+url+" ");
-            InputStream is = url.openStream();
             file.getParentFile().mkdirs();
-            OutputStream os = new FileOutputStream(file);
-            byte[] buffer = new byte[16*1024];
-            int read = 0;
             long total = 0;
-            while ((read=is.read(buffer))>0) {
-                os.write(buffer,0,read);
-                total += read;
-                System.out.print(".");
-            }
-            os.flush();os.close();is.close();
+            try (InputStream is = url.openStream();
+                OutputStream os = new FileOutputStream(file)){
+                byte[] buffer = new byte[16*1024];
+                int read = 0;
+                while ((read=is.read(buffer))>0) {
+                    os.write(buffer,0,read);
+                    total += read;
+                    System.out.print(".");
+                }
+                os.flush();
+                }
             System.out.println(" "+total+" bytes read.");
             return true;
         } catch (IOException ex) {
@@ -93,20 +94,21 @@ public class WikiGet extends Task {
         }
         return false;
     }
-    
+
     public boolean copyAndParse(URL url, File file, Parser parser) {
         try {
             System.out.println("  Get: "+url);
-            BufferedReader is = new BufferedReader(new InputStreamReader(url.openStream()));
             file.getParentFile().mkdirs();
             if (file.getName().equalsIgnoreCase(".html")) file = new File(file.getParentFile(), "index.html");
-            PrintWriter pw = new PrintWriter(new FileWriter(file));
-            String line = null;
-            while ((line=is.readLine())!=null) {
-                line = parser.parse(line);
-                if (line!=null) pw.println(line);
+            try (BufferedReader is = new BufferedReader(new InputStreamReader(url.openStream()));
+                 PrintWriter pw = new PrintWriter(new FileWriter(file))) {
+                String line = null;
+                while ((line=is.readLine())!=null) {
+                    line = parser.parse(line);
+                    if (line!=null) pw.println(line);
+                }
+                pw.flush();
             }
-            pw.flush();pw.close();is.close();
             return true;
         } catch (Exception ex) {
             System.out.println();

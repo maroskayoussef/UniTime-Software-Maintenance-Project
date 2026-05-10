@@ -158,10 +158,10 @@ public abstract class DatabaseUpdate {
                         		hibSession.doWork(new Work() {
 									@Override
 									public void execute(Connection connection) throws SQLException {
-		                                Statement statement = connection.createStatement();
-		                                int lines = statement.executeUpdate(sql);
-		                                sLog.debug("  -- "+lines+" lines affected.");
-		                                statement.close();
+		                                try(Statement statement = connection.createStatement()){
+                                            int lines = statement.executeUpdate(sql);
+                                            sLog.debug("  -- "+lines+" lines affected.");
+                                        }
 									}
 								});
                         	} else throw e;

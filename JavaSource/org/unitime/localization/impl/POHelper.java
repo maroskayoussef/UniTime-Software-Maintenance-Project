@@ -118,13 +118,19 @@ public class POHelper extends ArrayList<POHelper.Block> {
 	public void readProperties(Bundle bundle, File sources, String locale) throws Exception {
 		Properties properties = new Properties();
 		File f = new File(sources, bundle.getClazz().getName().replace('.', '/') + "_" + locale + ".properties");
-		if (f.exists())
-			properties.load(new FileReader(f));
+		if (f.exists()) {
+			try (FileReader fr = new FileReader(f)) {
+				properties.load(fr);
+			}
+		}
 		
 		Properties enUK = new Properties();
 		f = new File(sources, bundle.getClazz().getName().replace('.', '/') + "_en_UK.properties");
-		if (f.exists())
-			enUK.load(new FileReader(f));
+		if (f.exists()) {
+			try (FileReader fr = new FileReader(f)) {
+				enUK.load(fr);
+			}
+		}
 		
 		if (PageNames.class.equals(bundle.getClazz())) {
 			for (String prop: new TreeSet<String>(iPageNames.keySet())) {
