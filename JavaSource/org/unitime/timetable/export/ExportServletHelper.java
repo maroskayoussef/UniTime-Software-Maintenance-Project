@@ -58,53 +58,127 @@ public class ExportServletHelper implements ExportHelper {
 	private PrintWriter iWriter = null;
 	private OutputStream iOutputStream = null;
 	
-	public ExportServletHelper(HttpServletRequest request, HttpServletResponse response, SessionContext context) throws UnsupportedEncodingException {
+//	public ExportServletHelper(HttpServletRequest request, HttpServletResponse response, SessionContext context) throws UnsupportedEncodingException {
+//		iResponse = response;
+//		iContext = context;
+//		String q = request.getParameter("q");
+//		String x = request.getParameter("x");
+//		if (q != null) {
+//			iParams = new QParams(q, false);
+//		} else if (x != null) {
+//			iParams = new QParams(x, true);
+//		} else {
+//			iParams = new HttpParams(request);
+//		}
+//		if ((!context.isAuthenticated() || context.getUser() instanceof AnonymousUserContext)) {
+//			UserContext uc = null;
+//			String token = getParameter("token");
+//			if (token != null && ApplicationProperty.ApiCanUseAPIToken.isTrue()) {
+//				uc = ((ApiToken)SpringApplicationContextHolder.getBean("apiToken")).getContext(getParameter("token"));
+//				if (uc != null) iContext = new CustomExportContext(request.getSession(), uc);
+//			} else if (isRequestEncoded()) {
+//				String user = getParameter("user");
+//				if (user != null)
+//					uc = new UniTimeUserContext(user, null, null, null);
+//			}
+//			if (uc != null) {
+//	    		String role = getParameter("role");
+//				Long sessionId = getAcademicSessionId();
+//	    		if (role != null && sessionId != null) {
+//	    			for (UserAuthority a: uc.getAuthorities()) {
+//	    				if (a.getAcademicSession() != null && a.getAcademicSession().getQualifierId().equals(sessionId) && role.equals(a.getRole())) {
+//	    					uc.setCurrentAuthority(a); break;
+//	    				}
+//	    			}
+//	    		}
+//	    		iContext = new CustomExportContext(request.getSession(), uc);
+//			}
+//		}
+//	}
+    public ExportServletHelper(HttpServletRequest request, HttpServletResponse response, SessionContext context)
+		throws UnsupportedEncodingException {
 		iResponse = response;
 		iContext = context;
+		iParams = resolveParams(request);
+		if (isAnonymousUser(context)) {
+			resolveAnonymousUser(request, context);
+		}
+	}
+
+	private Exporter.Params resolveParams(HttpServletRequest request) throws UnsupportedEncodingException {
 		String q = request.getParameter("q");
 		String x = request.getParameter("x");
-		if (q != null) {
-			iParams = new QParams(q, false);
-		} else if (x != null) {
-			iParams = new QParams(x, true);
-		} else {
-			iParams = new HttpParams(request);
+		if (q != null) return new QParams(q, false);
+		if (x != null) return new QParams(x, true);
+		return new HttpParams(request);
+	}
+
+	private boolean isAnonymousUser(SessionContext context) {
+		return !context.isAuthenticated() || context.getUser() instanceof AnonymousUserContext;
+	}
+
+	private void resolveAnonymousUser(HttpServletRequest request, SessionContext context) {
+		UserContext uc = resolveUserContext();
+		if (uc == null) return;
+		applyRoleIfAvailable(uc);
+		iContext = new CustomExportContext(request.getSession(), uc);
+	}
+
+	private UserContext resolveUserContext() {
+		String token = getParameter("token");
+		if (token != null && ApplicationProperty.ApiCanUseAPIToken.isTrue()) {
+			return resolveTokenUser(token);
 		}
-		if ((!context.isAuthenticated() || context.getUser() instanceof AnonymousUserContext)) {
-			UserContext uc = null;
-			String token = getParameter("token");
-			if (token != null && ApplicationProperty.ApiCanUseAPIToken.isTrue()) {
-				uc = ((ApiToken)SpringApplicationContextHolder.getBean("apiToken")).getContext(getParameter("token"));
-				if (uc != null) iContext = new CustomExportContext(request.getSession(), uc);
-			} else if (isRequestEncoded()) {
-				String user = getParameter("user");
-				if (user != null)
-					uc = new UniTimeUserContext(user, null, null, null);
-			}
-			if (uc != null) {
-	    		String role = getParameter("role");
-				Long sessionId = getAcademicSessionId();
-	    		if (role != null && sessionId != null) {
-	    			for (UserAuthority a: uc.getAuthorities()) {
-	    				if (a.getAcademicSession() != null && a.getAcademicSession().getQualifierId().equals(sessionId) && role.equals(a.getRole())) {
-	    					uc.setCurrentAuthority(a); break;
-	    				}
-	    			}
-	    		}
-	    		iContext = new CustomExportContext(request.getSession(), uc);
+		if (isRequestEncoded()) {
+			return resolveEncodedUser();
+		}
+		return null;
+	}
+
+	private UserContext resolveTokenUser(String token) {
+		UserContext uc = ((ApiToken) SpringApplicationContextHolder.getBean("apiToken")).getContext(token);
+		return uc;
+	}
+
+	private UserContext resolveEncodedUser() {
+		String user = getParameter("user");
+		if (user != null) {
+			return new UniTimeUserContext(user, null, null, null);
+		}
+		return null;
+	}
+
+	private void applyRoleIfAvailable(UserContext uc) {
+		String role = getParameter("role");
+		Long sessionId = getAcademicSessionId();
+		if (role == null || sessionId == null) return;
+		for (UserAuthority a : uc.getAuthorities()) {
+			if (matchesAuthority(a, sessionId, role)) {
+				uc.setCurrentAuthority(a);
+				break;
 			}
 		}
 	}
-		
+
+	private boolean matchesAuthority(UserAuthority a, Long sessionId, String role) {
+		return a.getAcademicSession() != null
+				&& a.getAcademicSession().getQualifierId().equals(sessionId)
+				&& role.equals(a.getRole());
+	}
+	private static final String CACHE_CONTROL = "Cache-Control";
+
 	@Override
 	public void setup(String content, String fileName, boolean binary) {
 		iResponse.setContentType("text/calendar".equalsIgnoreCase(content) ? content : content + "; charset=UTF-8");
 		iResponse.setCharacterEncoding("UTF-8");
 		
 		iResponse.setHeader("Pragma", "no-cache" );
-		iResponse.addHeader("Cache-Control", "must-revalidate" );
-		iResponse.addHeader("Cache-Control", "no-cache" );
-		iResponse.addHeader("Cache-Control", "no-store" );
+//		iResponse.addHeader("Cache-Control", "must-revalidate" );
+//		iResponse.addHeader("Cache-Control", "no-cache" );
+//		iResponse.addHeader("Cache-Control", "no-store" );
+		iResponse.addHeader(CACHE_CONTROL, "must-revalidate");
+		iResponse.addHeader(CACHE_CONTROL, "no-cache");
+		iResponse.addHeader(CACHE_CONTROL, "no-store");
 		iResponse.setDateHeader("Date", new Date().getTime());
 		iResponse.setDateHeader("Expires", 0);
 		
