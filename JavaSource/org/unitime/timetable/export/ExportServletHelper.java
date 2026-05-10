@@ -105,7 +105,7 @@ public class ExportServletHelper implements ExportHelper {
 		}
 	}
 
-	private Exporter.Params resolveParams(HttpServletRequest request) {
+	private Exporter.Params resolveParams(HttpServletRequest request) throws UnsupportedEncodingException {
 		String q = request.getParameter("q");
 		String x = request.getParameter("x");
 		if (q != null) return new QParams(q, false);
