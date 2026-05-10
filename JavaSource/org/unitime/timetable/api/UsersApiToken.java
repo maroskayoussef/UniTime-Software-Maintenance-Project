@@ -80,11 +80,8 @@ public class UsersApiToken implements ApiToken {
 				byte[] iv = new BigInteger(string_parts[0], 36).toByteArray();
 				cipher.init(Cipher.DECRYPT_MODE, secret(), new IvParameterSpec(iv));
 				return new String(cipher.doFinal(new BigInteger(string_parts[1], 36).toByteArray()));
-			} else {
-				// fallback for old encoded values
-				cipher.init(Cipher.DECRYPT_MODE, secret());
-				return new String(cipher.doFinal(new BigInteger(text, 36).toByteArray()));
 			}
+			return null;
 		} catch (Exception e) {
 			throw new GwtRpcException("Decoding failed: " + e.getMessage(), e);
 		}
